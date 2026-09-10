@@ -1,0 +1,458 @@
+/* ==========================================================================
+   1. CORE VARIABLES, RESET, & WORKSPACE STRUCTURE
+   ========================================================================== */
+
+:root {
+  --bg-dark: #121214;
+  --bg-surface: #1e1e24;
+  --border-color: #2a2a32;
+  --primary-green: #2ecc71;
+  --accent-blue: #3498db;
+  --text-light: #f5f6fa;
+  --text-dim: #7f8c8d;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.calc-container {
+  width: 100%;
+  max-width: 850px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+}
+
+h1 {
+  font-size: 18px !important;
+  margin-top: -5px !important;
+  margin-bottom: 12px !important;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.sub-tag {
+  font-size: 13px;
+  color: var(--text-dim);
+  text-align: center;
+  margin-bottom: 25px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+/* Split Dashboard Layout */
+.workspace-split {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 25px;
+}
+
+/* ==========================================================================
+   2. DECK ROWS & UNIFIED 3D TILE CARD SYSTEM
+   ========================================================================== */
+
+.deck-header {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  margin-top: 10px;
+}
+
+.deck-row {
+  display: flex !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+  background: rgba(0, 0, 0, 0.3) !important;
+  padding: 5px 8px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--border-color) !important;
+  margin-bottom: 6px !important;
+  min-height: 48px !important; 
+  align-items: center !important;
+}
+
+/* Consolidated Tile Card Component */
+.tile-card {
+  position: relative !important;
+  width: 32px !important;  
+  height: 44px !important; 
+  display: inline-flex !important;
+  border-radius: 5px !important;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.4) !important;
+  border: none !important; 
+  background-color: transparent !important; 
+  overflow: hidden !important;
+  margin: 2px !important;
+  user-select: none;
+  cursor: pointer;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+/* Unified Native Vector Asset Constraints */
+.tile-card img, 
+.tile-card object,
+#display-melded-sets img,
+#display-concealed-tiles img,
+#display-winning-tile img,
+.tile-row-grid img {
+  width: 100% !important;
+  height: 100% !important;
+  display: block !important;
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  object-fit: fill !important; 
+  background: transparent !important;
+  z-index: 10 !important;
+  pointer-events: none !important;
+  padding: 1px !important;
+}
+
+/* Interactive Board Hover Response */
+.tile-card:hover {
+  transform: translateY(-4px) scale(1.02) !important;
+  box-shadow: 0 6px 12px rgba(46,204,113,0.3) !important;
+}
+
+.tile-card:active {
+  transform: translateY(0);
+}
+
+/* Honors Layout Horizontal Distribution */
+.honors-combined-row {
+  display: flex !important;
+  gap: 10px !important;
+  width: 100% !important;
+}
+
+.honors-half {
+  flex: 1 !important;
+}
+
+/* ==========================================================================
+   3. HAND WORKSPACE GENERATION TRACKS (REPLACED / UPDATED)
+   ========================================================================== */
+
+.display-section {
+  margin-top: 8px !important;
+  background: rgba(0,0,0,0.2);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px !important;
+}
+
+.display-row {
+  margin-bottom: 6px !important;
+}
+
+.display-row-title {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+/* Base Slots Container Configuration */
+.slots-container {
+  min-height: 52px !important;
+  background: var(--bg-dark) !important;
+  border: 1px solid var(--border-color) !important;
+  border-radius: 6px !important;
+  padding: 3px 6px !important;
+  display: flex !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+}
+
+/* NEW TIGHT PACKING LOGIC - FOR CONCEALED HAND TRACK */
+.slots-container.standard-hand-line {
+  display: flex !important;
+  flex-wrap: nowrap !important;   /* Prevents tiles from snapping to a 2nd row */
+  overflow-x: auto !important;    /* Adds horizontal swipe if screen gets tiny */
+  gap: 0px !important;            /* Strips the gap space between cards */
+  padding: 4px 8px !important;
+}
+
+/* Layered Interlocking Structural Hand Alignment */
+.slots-container.standard-hand-line .tile-card {
+  margin-right: -6px !important;  /* Pulls tiles together to touch/overlap */
+  box-shadow: -3px 2px 5px rgba(0,0,0,0.5) !important; /* Elegant 3D layering shadows */
+  z-index: 10 !important;
+  flex-shrink: 0 !important;     /* Stops browser from crushing tile widths */
+  margin-top: 2px !important;
+  margin-bottom: 2px !important;
+}
+
+/* Keep card order stack intuitive as tiles are hovered left-to-right */
+.slots-container.standard-hand-line .tile-card:hover {
+  transform: translateY(-6px) scale(1.04) !important;
+  z-index: 50 !important;         /* Pulls active card in front of neighbors */
+}
+
+/* --- DECLARED MELDES TIGHT EMBEDDED LAYOUT --- */
+.meld-block {
+  display: inline-flex !important;
+  gap: 0px !important; /* Strips spacing inside the meld block */
+  background: rgba(255, 255, 255, 0.05);
+  padding: 3px 6px 3px 3px !important; /* Adds a bit of padding on the right side */
+  border-radius: 6px;
+  border: 1px dashed #555;
+  cursor: pointer;
+  margin-right: 4px !important; /* Keeps a clean spacing gap between distinct melded sets */
+  transition: border-color 0.1s, background 0.1s;
+}
+
+/* Force tiles inside your meld blocks to layer and touch beautifully */
+.meld-block .tile-card {
+  margin-right: -6px !important; /* Pulls internal meld cards together horizontally */
+  box-shadow: -2px 1px 4px rgba(0,0,0,0.5) !important; /* 3D overlapping stack shadows */
+  z-index: 10 !important;
+  flex-shrink: 0 !important;
+}
+
+/* Lift cards up beautifully when hovering over a specific set block */
+.meld-block:hover {
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.1);
+}
+
+.meld-block:hover .tile-card {
+  transform: translateY(-3px) !important; /* Gives a subtle group lift effect */
+  z-index: 20 !important;
+}
+
+.single-tile {
+  cursor: pointer;
+}
+
+.single-tile:hover {
+  transform: scale(1.05);
+  border-color: #e74c3c;
+}
+
+#display-winning-tile .tile-card {
+  border: 2px solid var(--primary-green) !important;
+}
+
+/* ==========================================================================
+   4. SIDEBAR CONFIGURATOR & DIAGNOSTICS LEDGER
+   ========================================================================== */
+
+.control-panel {
+  background: rgba(0,0,0,0.15);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 10px !important;
+  font-size: 12px !important;
+}
+
+.panel-group {
+  margin-bottom: 10px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.panel-group:last-child {
+  margin-bottom: 0;
+  border: none;
+  padding-bottom: 0;
+}
+
+.panel-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--accent-blue);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.radio-label, .check-label {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  color: var(--text-light);
+}
+
+input[type="radio"], input[type="checkbox"] {
+  margin-right: 8px;
+  accent-color: var(--accent-blue);
+  width: 15px;
+  height: 16px;
+}
+
+select {
+  width: 100%;
+  min-height: 32px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: #fff;
+  padding: 0 5px;
+  font-size: 13px;
+  outline: none;
+}
+
+/* Compact Forms Grids */
+.side-by-side-row {
+  display: flex !important;
+  justify-content: flex-start !important;
+  gap: 15px !important;
+  width: 100% !important;
+}
+
+.half-width-select {
+  flex: 1 !important;
+}
+
+.two-column-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.grid-mode-column {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.sub-column-title {
+  font-size: 10px !important;
+  font-weight: bold !important;
+  color: var(--text-dim) !important;
+  text-transform: uppercase !important;
+  margin-bottom: 4px !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  padding-bottom: 1px !important;
+}
+
+.nano-label {
+  font-size: 12px !important;
+  margin-bottom: 3px !important;
+}
+
+.nano-label input {
+  width: 13px !important;
+  height: 13px !important;
+  margin-right: 5px !important;
+}
+
+/* Action Execution System */
+.action-btn {
+  width: 100%;
+  min-height: 32px !important;
+  border: none;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 13px !important;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px !important;
+}
+
+#clear-btn { background: #e74c3c; color: #fff; }
+#calc-btn { background: var(--primary-green); color: #000; font-size: 15px; margin-top: 10px !important; }
+
+/* Score Breakdown Panel */
+#report-panel {
+  margin-top: 10px !important;
+  padding: 10px !important;
+  border: 1px solid var(--primary-green);
+  background: rgba(46,204,113,0.05);
+  border-radius: 10px;
+  display: none;
+}
+
+.report-line {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 4px 0;
+  border-bottom: 1px dotted #333;
+}
+
+/* Keeps tiles fully bright, but gives the concealed container block a subtle indicator styling */
+.slots-container.standard-hand-line .meld-block {
+  border: 1px dashed #4f5d73 !important;
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Changes border color to red on hover to show it can be clicked to delete */
+.slots-container.standard-hand-line .meld-block:hover {
+  border-color: #e74c3c !important;
+  background: rgba(231, 76, 60, 0.08) !important;
+}
+
+/* ==========================================================================
+   HIGH-DENSITY COMPACT TABLET VIEW OVERRIDES
+   ========================================================================== */
+
+/* 1. Reduce side padding on the main screen container to maximize width */
+body {
+  padding: 8px !important;
+}
+
+.calc-container {
+  padding: 12px 14px !important;
+  max-width: 960px !important; /* Stretch limits to allow more horizontal room */
+}
+
+/* 2. Narrow down the sidebar column and compress the split dashboard grid gap */
+.workspace-split {
+  grid-template-columns: 1fr 240px !important; /* Shrink sidebar width from 280px to 240px */
+  gap: 12px !important; /* Tighten gap space between left and right area panels */
+}
+
+/* 3. Strip extra whitespace out from row selectors */
+.deck-row {
+  gap: 4px !important;
+  padding: 4px 6px !important;
+  margin-bottom: 4px !important;
+  min-height: 42px !important;
+}
+
+/* 4. TIGHT HORIZONTAL TILE FORCE COMPRESSION FOR REFRESH_DOM LINE */
+.slots-container.standard-hand-line {
+  display: flex !important;
+  flex-wrap: nowrap !important;   /* Force tiles to stay on exactly ONE single row */
+  overflow-x: auto !important;    /* Allow finger-swiping if resolution gets extremely narrow */
+  gap: 0px !important;
+  padding: 3px 4px !important;
+}
+
+/* Interlock the tile layout margins tighter */
+.slots-container.standard-hand-line .tile-card {
+  margin-right: -10px !important; /* Pulls tiles closer together horizontally */
+  box-shadow: -3px 2px 4px rgba(0,0,0,0.6) !important;
+}
+
+/* Bring item up beautifully on active hovering */
+.slots-container.standard-hand-line .tile-card:hover {
+  transform: translateY(-8px) scale(1.06) !important;
+  margin-right: -4px !important;  /* Opens up space dynamically around active item */
+}

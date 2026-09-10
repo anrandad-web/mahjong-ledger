@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🀄 Interactive Online Mahjong Dashboard Tracker</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="calc-container">
+
+    <!-- AUTOMATED NATIVE APP POPUP BANNER MODAL -->
+    <div id="app-notification-toast" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #2c3e50; border: 2px solid gold; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); padding: 15px; z-index: 100000; animation: slideDown 0.3s ease;">
+      <div style="display: flex; flex-direction: column; gap: 8px; text-align: center;">
+        <div style="font-weight: bold; color: gold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">🀄 Parlor Table Status Update</div>
+        <div id="app-notification-message" style="font-size: 13px; color: #fff; line-height: 1.4;">Message text goes here...</div>
+        <button onclick="SessionEngine.closeAppNotification()" style="background: var(--primary-green); color: #000; border: none; padding: 6px 15px; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; margin-top: 4px; max-width: 100px; align-self: center;">OK</button>
+      </div>
+    </div>
+
+    <style>
+    @keyframes slideDown {
+      from { top: -100px; opacity: 0; }
+      to { top: 20px; opacity: 1; }
+    }
+    </style>
+
+    <!-- ==========================================================================
+         SCREEN MODULE D: AI CAMERA SCANNER VIEWPORT MODAL OVERLAY
+         ========================================================================== -->
+    <div id="camera-scanner-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9999; padding: 15px; box-sizing: border-box; flex-direction: column; gap: 10px;">
+      
+      <!-- Top Status Return Bar -->
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+        <span style="font-size: 14px; color: gold; font-weight: bold;">📸 AI Camera Tile Recognition (Route B)</span>
+        <button onclick="CameraEngine.closeCameraScanner()" style="background: transparent; border: 1px solid #e74c3c; padding: 4px 12px; color: #e74c3c; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold;">🔙 Abort Scan</button>
+      </div>
+
+      <!-- FLAT ALIGNMENT INSTRUCTIONS CARD -->
+      <div style="background: rgba(255,255,255,0.03); border: 1px dashed var(--accent-blue); padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; color: var(--text-light);">
+        <div style="font-weight: bold; color: var(--accent-blue); margin-bottom: 4px; text-transform: uppercase;">⚠️ Rules for Table Alignment:</div>
+        <ul style="margin: 0; padding-left: 15px; display: flex; flex-direction: column; gap: 2px;">
+          <li>Place hand <b style="color: var(--primary-green);">flat on the table</b>. No overlapping or leaning tiles.</li>
+          <li><b>Top Row:</b> All open Melded Sets and Bonus Flowers.</li>
+          <li><b>Bottom Row:</b> All Concealed Tiles, with the <b style="color: gold;">Winning Tile at the far right</b>.</li>
+          <li>Hold tablet flat directly above and <b style="color: gold;">take the picture from the top look-down view</b>.</li>
+        </ul>
+      </div>
+
+      <!-- LIVE HARDWARE CAMERA STREAM VIEWPORT CONTAINER -->
+      <div style="flex: 1; position: relative; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
+        <video id="camera-stream-feed" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
+        
+        <!-- Geometric Grid Box Overlay Guides -->
+        <div id="camera-grid-guide" style="position: absolute; width: 90%; height: 60%; border: 2px dashed rgba(46, 204, 113, 0.5); border-radius: 4px; pointer-events: none; display: flex; flex-direction: column;">
+          <div style="flex: 1; border-bottom: 2px dashed rgba(46, 204, 113, 0.3); display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: bold; background: rgba(255,255,255,0.01);">
+            [ Align Top Row: Open Melds / Flowers ]
+          </div>
+          <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: bold; background: rgba(255,255,255,0.01);">
+            [ Align Bottom Row: Concealed Tiles ]
+            <!-- Targeted Winning Anchor Box Indicator -->
+            <div style="position: absolute; right: 0; bottom: 0; width: 60px; height: 100%; border-left: 2px solid gold; background: rgba(241, 196, 15, 0.1); display: flex; align-items: center; justify-content: center; font-size: 8px; color: gold; text-align: center; padding: 2px;">WIN TILE</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRIGGER ACTION CONTROLS PANEL -->
+      <div style="display: flex; gap: 10px; justify-content: center; padding: 5px 0;">
+        <button onclick="CameraEngine.captureSnapshotFrame()" style="background: var(--primary-green); color: #000; font-size: 16px; font-weight: bold; border: none; padding: 12px 40px; border-radius: 30px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(46,204,113,0.3);">📸 Capture & Template Match</button>
+      </div>
+
+      <!-- Hidden canvas context used to execute pixel crops offline -->
+      <canvas id="camera-processing-canvas" style="display: none;"></canvas>
+    </div>
+
+
+    <!-- 1. COMPACT ONE-LINE TITLE -->
+    <h1>🀄 Interactive MCR & HK Mahjong Tracker Dashboard</h1>
+
+    <!-- AUTOMATED NATIVE APP POPUP BANNER MODAL -->
+    <div id="app-notification-toast" style="display: none; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: #2c3e50; border: 2px solid gold; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.6); padding: 15px; z-index: 9999; animation: slideDown 0.3s ease;">
+      <div style="display: flex; flex-direction: column; gap: 8px; text-align: center;">
+        <div style="font-weight: bold; color: gold; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">🀄 Parlor Table Status Update</div>
+        <div id="app-notification-message" style="font-size: 13px; color: #fff; line-height: 1.4;">Message text goes here...</div>
+        <button onclick="SessionEngine.closeAppNotification()" style="background: var(--primary-green); color: #000; border: none; padding: 6px 15px; border-radius: 4px; font-weight: bold; font-size: 12px; cursor: pointer; margin-top: 4px; max-width: 100px; align-self: center;">OK</button>
+      </div>
+    </div>
+
+    <style>
+    @keyframes slideDown {
+      from { top: -100px; opacity: 0; }
+      to { top: 20px; opacity: 1; }
+    }
+    </style>
+
+
+    <!-- ==========================================================================
+         SCREEN MODULE A: INITIAL GAME VARIANT & PLAYER NAMES SETUP
+         ========================================================================== -->
+    <div id="setup-screen" style="max-width: 500px; margin: 30px auto; padding: 20px; background: rgba(0,0,0,0.2); border: 1px solid var(--border-color); border-radius: 10px;">
+      <div class="panel-group" style="margin-bottom: 20px;">
+        <div class="panel-title" style="font-size: 14px; text-align: center; margin-bottom: 12px;">1. Select Game Variant Mode</div>
+        <div class="side-by-side-row" style="justify-content: center; gap: 40px;">
+          <label class="radio-label" style="font-size: 16px;"><input type="radio" name="game-variant" value="HK" checked style="width: 18px; height: 18px;"> HK Rules (Faan Only)</label>
+          <label class="radio-label" style="font-size: 16px;"><input type="radio" name="game-variant" value="MCR" style="width: 18px; height: 18px;"> MCR (Points)</label>
+        </div>
+      </div>
+
+      <div class="panel-group" style="margin-bottom: 20px;">
+        <div class="panel-title" style="font-size: 14px; text-align: center; margin-bottom: 12px;">2. Assign Initial Seat Names</div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: bold; color: var(--accent-blue); width: 100px;">Dong (East):</span>
+            <input type="text" id="setup-name-dong" value="Player A" style="flex: 1; padding: 6px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: bold; color: var(--accent-blue); width: 100px;">Nan (South):</span>
+            <input type="text" id="setup-name-nan" value="Player B" style="flex: 1; padding: 6px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: bold; color: var(--accent-blue); width: 100px;">Xi (West):</span>
+            <input type="text" id="setup-name-xi" value="Player C" style="flex: 1; padding: 6px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: bold; color: var(--accent-blue); width: 100px;">Bei (North):</span>
+            <input type="text" id="setup-name-bei" value="Player D" style="flex: 1; padding: 6px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px;">
+          </div>
+        </div>
+      </div>
+
+      <button id="start-game-btn" class="action-btn" onclick="SessionEngine.startGame()" style="background: var(--primary-green); color: #000; font-size: 16px; padding: 10px; margin-top: 15px;">🀄 Initialize Session & Start Match</button>
+    </div>
+
+    <!-- ==========================================================================
+         SCREEN MODULE B: LIVE TABLE LEDGER & SESSION STANDINGS VIEW
+         ========================================================================== -->
+    <div id="ledger-screen" style="display: none; margin-bottom: 15px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 12px 20px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+        <h2 id="ledger-game-count" style="font-size: 16px; color: #fff; margin: 0;">Game Count: #1</h2>
+        <h2 id="ledger-round-wind" style="font-size: 16px; color: var(--accent-blue); margin: 0;">Round Wind: East (🀀)</h2>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; background: rgba(0,0,0,0.15); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 25px; text-align: left;">
+        <thead>
+          <tr style="background: rgba(255,255,255,0.05); border-bottom: 1px solid var(--border-color);">
+            <th style="padding: 12px; font-size: 13px; color: var(--text-dim); text-transform: uppercase;">Player Name Label</th>
+            <th style="padding: 12px; font-size: 13px; color: var(--text-dim); text-transform: uppercase;">Current Seat Position</th>
+            <th style="padding: 12px; font-size: 13px; color: var(--text-dim); text-transform: uppercase; text-align: right;">Running Balance Score</th>
+          </tr>
+        </thead>
+        <tbody id="ledger-table-body">
+          <!-- Live rows dynamically populated from memory scripts -->
+        </tbody>
+      </table>
+
+    <!-- HISTORICAL LOG SHEET OVERVIEW CONTAINER -->
+    <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-bottom: 20px;">
+      <div class="panel-title" style="color: gold; font-size: 11px; margin-bottom: 6px; letter-spacing: 0.5px;">📋 Match History Log Ledger</div>
+      <div id="history-log-body" style="max-height: 180px; overflow-y: auto; padding-right: 4px;">
+        <div style="font-size: 12px; color: var(--text-dim); text-align: center; padding: 10px 0;">No rounds logged yet. Start playing!</div>
+      </div>
+    </div>
+
+      <div style="max-width: 400px; margin: 0 auto;">
+        <button id="record-win-btn" class="action-btn" onclick="SessionEngine.openCalculator()" style="background: var(--accent-blue); color: #fff; font-size: 15px; padding: 12px; border-radius: 8px;">🚀 Log Completed Round Result</button>
+      </div>
+    </div>
+
+        <!-- ==========================================================================
+         SCREEN MODULE C: CORE HAND BUILDER & POINT CALCULATOR INTERFACE
+         ========================================================================== -->
+    <div id="calculator-wrapper" style="display: none;">
+      <!-- Dashboard Return Banner -->
+      <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(231, 76, 60, 0.1); border: 1px dashed #e74c3c; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px;">
+        <span style="font-size: 13px; color: #f5f6fa; font-weight: bold;">⚠️ active session builder tracking layer</span>
+        <button onclick="SessionEngine.backToLedger()" style="background: transparent; border: 1px solid var(--text-dim); padding: 4px 10px; color: var(--text-light); border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: bold;">🔙 Abort & Back to Ledger</button>
+      </div>
+
+      <div class="workspace-split">
+        <div class="main-workspace-area">
+          
+          <!-- DECK ROWS FOR SELECTING SUITS & HONORS -->
+          <div id="pool-wan" class="deck-row">
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_1')"><object type="image/svg+xml" data="image/wan1.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_2')"><object type="image/svg+xml" data="image/wan2.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_3')"><object type="image/svg+xml" data="image/wan3.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_4')"><object type="image/svg+xml" data="image/wan4.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_5')"><object type="image/svg+xml" data="image/wan5.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_6')"><object type="image/svg+xml" data="image/wan6.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_7')"><object type="image/svg+xml" data="image/wan7.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_8')"><object type="image/svg+xml" data="image/wan8.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WAN_9')"><object type="image/svg+xml" data="image/wan9.svg"></object></div>
+          </div>
+          <div id="pool-tong" class="deck-row">
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_1')"><object type="image/svg+xml" data="image/tong1.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_2')"><object type="image/svg+xml" data="image/tong2.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_3')"><object type="image/svg+xml" data="image/tong3.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_4')"><object type="image/svg+xml" data="image/tong4.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_5')"><object type="image/svg+xml" data="image/tong5.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_6')"><object type="image/svg+xml" data="image/tong6.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_7')"><object type="image/svg+xml" data="image/tong7.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_8')"><object type="image/svg+xml" data="image/tong8.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_TONG_9')"><object type="image/svg+xml" data="image/tong9.svg"></object></div>
+          </div>
+          <div id="pool-suo" class="deck-row">
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_1')"><object type="image/svg+xml" data="image/suo1.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_2')"><object type="image/svg+xml" data="image/suo2.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_3')"><object type="image/svg+xml" data="image/suo3.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_4')"><object type="image/svg+xml" data="image/suo4.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_5')"><object type="image/svg+xml" data="image/suo5.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_6')"><object type="image/svg+xml" data="image/suo6.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_7')"><object type="image/svg+xml" data="image/suo7.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_8')"><object type="image/svg+xml" data="image/suo8.svg"></object></div>
+            <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_SUO_9')"><object type="image/svg+xml" data="image/suo9.svg"></object></div>
+          </div>
+
+          <div class="honors-combined-row">
+            <div id="pool-wind" class="deck-row honors-half">
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WND_E')"><object type="image/svg+xml" data="image/dong.svg"></object></div>
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WND_S')"><object type="image/svg+xml" data="image/nan.svg"></object></div>
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WND_W')"><object type="image/svg+xml" data="image/xi.svg"></object></div>
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_WND_N')"><object type="image/svg+xml" data="image/bei.svg"></object></div>
+            </div>
+            <div id="pool-dragon" class="deck-row honors-half">
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_DRG_R')"><object type="image/svg+xml" data="image/zhong.svg"></object></div>
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_DRG_G')"><object type="image/svg+xml" data="image/fa.svg"></object></div>
+              <div class="tile-card" onclick="HandOrganizer.handleTileClickByID('T_DRG_W')"><object type="image/svg+xml" data="image/bai.svg"></object></div>
+            </div>
+          </div>
+
+          <!-- DYNAMIC ACTIVE HAND BUILDER ROWS -->
+          <div class="display-section">
+            <div class="display-row">
+              <div class="display-row-title">Declared Open Melded Sets (Click block to delete)</div>
+              <div id="display-melded-sets" class="slots-container"></div>
+            </div>
+            <div class="display-row">
+              <div class="display-row-title">Concealed Tiles Segment (Click tile to remove)</div>
+              <div id="display-concealed-tiles" class="slots-container standard-hand-line"></div>
+            </div>
+            <div class="display-row">
+              <div class="display-row-title">Winning Tile Target Anchor (Click to clear)</div>
+              <div id="display-winning-tile" class="slots-container"></div>
+            </div>
+            <div id="workbench-counter" class="deck-header" style="text-align: right; margin-top: 5px;">Tiles Loaded: 0 / 14</div>
+          </div>
+
+          <!-- Hand Breakdown Ledger Panels -->
+          <div id="report-panel" style="margin-top: 10px;">
+            <div class="panel-title" style="color: var(--primary-green); font-size: 14px; margin-bottom: 8px;">📊 Hand Breakdown Ledger</div>
+            <div id="report-breakdown"></div>
+            <div id="report-total" style="font-weight: bold; font-size: 14px; margin-top: 8px; border-top: 1px solid var(--primary-green); padding-top: 6px; text-align: right;"></div>
+            <!-- TRANSACTION INTEGRATION LINK BUTTON -->
+            <button id="commit-to-ledger-btn" class="action-btn" onclick="SessionEngine.commitCalculatedPointsToBalance()" style="background: gold; color: #000; font-size: 14px; font-weight: bold; margin-top: 10px;">💾 Save Round & Update Scores</button>
+          </div>
+        </div>
+
+                <!-- RIGHT SIDEBAR CONFIGURATOR COLUMNS PANEL -->
+        <!-- CLEANED & VERTICALLY COMPACT SIDEBAR CONFIGURATOR PANEL -->
+        <div class="control-panel">
+          
+          <!-- AUTOMATED TRANSACTION HUB -->
+          <div class="panel-group" style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
+            <div class="panel-title" style="color: gold;">👥 Round Transaction Context</div>
+            <div style="margin-bottom: 6px;">
+              <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px;">ROUND WINNER</label>
+              <select id="winner-player-select" onchange="SessionEngine.syncSidebarWinds()" style="border-color: var(--primary-green); color: #fff; background: var(--bg-dark); width: 100%; border-radius: 4px; min-height: 28px; font-size: 13px;"></select>
+            </div>
+            <div>
+              <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px;">WIN VICTORY METHOD PATH</label>
+              <select id="loser-player-select" onchange="SessionEngine.syncVictoryMethodRadio()" style="color: #fff; background: var(--bg-dark); width: 100%; border-radius: 4px; min-height: 28px; font-size: 13px;">
+                <!-- Options are dynamically injected by player setup scripts -->
+              </select>
+            </div>
+          </div>
+
+          <!-- HIDDEN SCORING PARAMETERS MATRIX MODIFIERS -->
+          <div style="display: none;">
+            <input type="radio" name="game-variant" value="MCR">
+            <input type="radio" name="game-variant" value="HK">
+            <!-- Hidden win-method radios linked directly to the top dropdown to cure the Self-Draw bug -->
+            <input type="radio" name="win-method" value="discard" id="hidden-win-discard">
+            <input type="radio" name="win-method" value="wall" id="hidden-win-wall">
+          </div>
+
+          <!-- READ-ONLY AUTOMATED MANDARIN WIND STATUS LABELS -->
+          <div class="panel-group" style="background: rgba(52, 152, 219, 0.05); padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(52, 152, 219, 0.2);">
+            <div class="side-by-side-row" style="gap: 10px;">
+              <div class="half-width-select">
+                <div class="panel-title" style="font-size: 10px; margin-bottom: 2px;">Round Wind</div>
+                <div id="text-wind-round" style="font-size: 14px; font-weight: bold; color: #fff;">-</div>
+                <input type="hidden" id="wind-round" value="1">
+              </div>
+              <div class="half-width-select">
+                <div class="panel-title" style="font-size: 10px; margin-bottom: 2px;">Seat Wind Winner</div>
+                <div id="text-wind-seat" style="font-size: 14px; font-weight: bold; color: var(--accent-blue);">-</div>
+                <input type="hidden" id="wind-seat" value="1">
+              </div>
+            </div>
+          </div>
+
+          <!-- STREAMLINED COMPACT 2-COLUMN INPUT MODES SYSTEM -->
+          <div class="panel-group">
+            <div class="panel-title">Add To Hand Mode</div>
+            <div class="two-column-grid">
+              <!-- Column A: Open Melded Components -->
+              <div class="grid-mode-column">
+                <div class="sub-column-title">a. Open Melded</div>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="chow" checked> chow</label>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="pung"> pung</label>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="melded_kong"> kong</label>
+                <label class="radio-label nano-label" style="color: var(--primary-green); font-weight: bold; margin-top: 3px; border-top: 1px dashed #444; padding-top: 3px;">
+                  <input type="radio" name="input-mode" value="winning_tile"> winning tile
+                </label>
+
+              </div>
+              <!-- Column B: Concealed Elements & Nested Winning Anchor -->
+              <div class="grid-mode-column">
+                <div class="sub-column-title">b. Concealed / Anchor</div>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_chow"> chow</label>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_pung"> pung</label>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_kong"> kong</label>
+                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_tile"> single / pair</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ADDITIONAL STATUS MODIFIERS CRITERIA -->
+          <div class="panel-group">
+            <div class="panel-title">Additional Criteria</div>
+            <div class="two-column-grid">
+              <div class="grid-mode-column">
+                <label class="check-label nano-label"><input type="checkbox" id="param-last-tile"> Last Tile</label>
+                <label class="check-label nano-label"><input type="checkbox" id="param-last-kind"> Last Kind</label>
+              </div>
+              <div class="grid-mode-column">
+                <label class="check-label nano-label"><input type="checkbox" id="param-replacement"> Replacement</label>
+                <label class="check-label nano-label"><input type="checkbox" id="param-robbing"> Robbing Kong</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- FLOWERS DISPLAY WRAP CONSOLE -->
+          <div class="panel-group">
+            <div class="panel-title">🌸 Flowers & Seasons</div>
+            <div id="mcr-flower-ui" class="side-by-side-row" style="margin-bottom: 8px;">
+              <label class="radio-label half-width-select" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                <span style="font-size: 11px; color: var(--text-dim);">MCR BONUS TILES COUNT</span>
+                <select id="mcr-flowers-count" style="color: #fff; background: var(--bg-dark); width: 100%;">
+                  <option value="0">0 Flowers</option>
+                  <option value="1">1 Flower (+1 Pt)</option>
+                  <option value="2">2 Flowers (+2 Pts)</option>
+                  <option value="3">3 Flowers (+3 Pts)</option>
+                  <option value="4">4 Flowers (+4 Pts)</option>
+                  <option value="5">5 Flowers (+5 Pts)</option>
+                  <option value="6">6 Flowers (+6 Pts)</option>
+                  <option value="7">7 Flowers (+7 Pts)</option>
+                  <option value="8">8 Flowers (+8 Pts)</option>
+                </select>
+              </label>
+            </div>
+            <div id="hk-flower-ui" style="display: none; flex-direction: column; gap: 8px;">
+              <div class="side-by-side-row">
+                <label class="radio-label half-width-select" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+                  <span style="font-size: 11px; color: var(--text-dim);">HONG KONG FLOWER STATUS</span>
+                  <select id="hk-flower-condition" style="color: #fff; background: var(--bg-dark); width: 100%;">
+                    <option value="NO_FLOWERS">No Flowers [+1]</option>
+                    <option value="ONE_MATCH">1 Flowers [+1]</option>
+                    <option value="TWO_MATCH">2 Flowers [+2]</option>
+                    <option value="ALL_FLOWERS">4 Flowers [+2]</option>
+                    <option value="ALL_SEASONS">4 Seasons [+2]</option>
+                    <option value="COMPLETE_EIGHT">8 Flowers [+8]</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- WORKSPACE ACTIONS TRIGGERS BUTTONS -->
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+            <button id="calc-btn" class="action-btn" onclick="ScoreEngine.calculateHandPoints()" style="background: var(--primary-green); color: #000; font-size: 15px; font-weight: bold; margin-top: 0 !important;">🚀 Run Hand Score Calculations</button>
+            
+            <div style="display: flex; gap: 8px; width: 100%;">
+              <button id="clear-btn" class="action-btn" onclick="HandOrganizer.clearHand()" style="flex: 1; margin-top: 0 !important; font-size: 12px;">🗑 Clear Hand</button>
+              <button id="scan-camera-btn" class="action-btn" onclick="CameraEngine.openCameraScanner()" style="flex: 1; margin-top: 0 !important; background: var(--accent-blue); color: #fff; font-size: 12px;">📸 Camera Scan</button>
+            </div>
+          </div>
+
+        </div> <!-- Closes .control-panel cleanly -->
+      </div> <!-- Closes .workspace-split cleanly -->
+    </div> <!-- Closes #calculator-wrapper cleanly -->
+  </div> <!-- Closes parent .calc-container cleanly -->
+
+  <!-- ==========================================================================
+       CRITICAL APPLICATION BACKBONE ENGINE LOADING ORDER PIPELINE
+       ========================================================================== -->
+  <script src="handOrganizer.js"></script>
+  <script src="scoreEngineCore.js"></script>
+  <script src="scoreEngineParser.js"></script>
+  <script src="scoreEngineMCRCore.js"></script>
+  <script src="scoreEngineMCRLimit.js"></script>
+  <script src="scoreEngineMCRStandard.js"></script>
+  <script src="scoreEngineHKCore.js"></script>
+  <script src="scoreEngineHKLimit.js"></script>
+  <script src="scoreEngineHKStandard.js"></script>
+  
+  <!-- 1. DECLARE ENGINE EVENT CALLBACK HOOKS FIRST -->
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      const variantRadios = document.querySelectorAll('input[name="game-variant"]');
+      variantRadios.forEach(radio => {
+        radio.addEventListener("change", (e) => {
+          const mcrUi = document.getElementById('mcr-flower-ui');
+          const hkUi = document.getElementById('hk-flower-ui');
+          if (mcrUi && hkUi) {
+            if (e.target.value === 'HK') {
+              mcrUi.setAttribute("style", "display: none !important;");
+              hkUi.setAttribute("style", "display: flex !important;");
+            } else {
+              mcrUi.setAttribute("style", "display: flex !important;");
+              hkUi.setAttribute("style", "display: none !important;");
+            }
+          }
+        });
+      });
+    });
+
+    // Fully globalized callback ready to catch the immediate local file onload trigger
+    function onOpenCvReady() {
+      console.log("OpenCV.js WebAssembly layer compiled successfully!");
+      if (window.CameraEngine) {
+        window.CameraEngine.initializeTemplateDatabase();
+      }
+    }
+  </script>
+
+  <!-- 2. EXECUTE THE LOCAL OFFLINE GEOMETRIC PARSING BRAIN -->
+  <script src="opencv.js" onload="onOpenCvReady()"></script>
+
+  <!-- 3. Ledger Session Infrastructure Scripts -->
+  <script src="sessionCore.js"></script>
+  <script src="sessionState.js"></script>
+  <script src="sessionTransactions.js"></script>
+  <script src="cameraEngine.js"></script>
+</body>
+</html>
