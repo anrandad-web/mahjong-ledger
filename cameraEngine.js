@@ -146,172 +146,153 @@ const CameraEngine = {
     this.executeTemplateMatching();
   },
   
-  // Stabilized Part 3: Noise-Filtered Hybrid Contour & Distance-Gated ORB Matcher
+  // Rebuilt Part 3: Robust Full-Tile Grayscale Template Matcher
   async executeTemplateMatching() {
-    console.log("Noise-Filtered AI template matching loop entered.");
+    console.log("Full-Tile Grayscale template matching loop entered.");
     
     if (!window.cv || typeof window.cv.Mat !== "function") {
-      return customAlert("AI Engine Error: OpenCV layer unavailable.");
+      return customAlert("AI Engine Error: OpenCV compilation layer is unavailable.");
     }
     if (!this.lastCapturedHand) {
-      return customAlert("Error: Capture memory layer empty.");
+      return customAlert("Error: Image memory layer empty.");
     }
+    const templatesList = Object.keys(this.tilePixelTemplates);
+    if (templatesList.length === 0) {
+      return customAlert("AI Processing Intercepted: Your offline tile template database is empty.");
+    }
+    
+    customAlert("AI Scanner processing active: Aligning tile contours...");
     if (window.HandOrganizer) window.HandOrganizer.clearHand();
-
+    
     const { topRow, bottomRow, dimensions } = this.lastCapturedHand;
     
     setTimeout(() => {
       try {
         let topMatSrc = window.cv.matFromImageData(topRow);
         let bottomMatSrc = window.cv.matFromImageData(bottomRow);
+        let topMatGray = new window.cv.Mat();
+        let bottomMatGray = new window.cv.Mat();
         
-        let processedRows = [
-          { mat: topMatSrc, isTopRow: true },
-          { mat: bottomMatSrc, isTopRow: false }
-        ];
-
-        processedRows.forEach(rowObj => {
-          let gray = new window.cv.Mat();
-          let thresh = new window.cv.Mat();
-          window.cv.cvtColor(rowObj.mat, gray, window.cv.COLOR_RGBA2GRAY);
+        // Clean grayscale flattening without aggressive shape distorting binary thresholding
+        window.cv.cvtColor(topMatSrc, topMatGray, window.cv.COLOR_RGBA2GRAY);
+        window.cv.cvtColor(bottomMatSrc, bottomMatGray, window.cv.COLOR_RGBA2GRAY);
+        
+        // The magical grid layout calculation fix:
+        // Divide by 7 elements since your hand spans exactly across the viewfinder row block width
+        const approximateTileWidth = Math.floor(dimensions.w / 7.0);
+        const templateScaleFactor = 0.92; // Lets your full-face drawings perfectly match camera dimensions
+        
+        // ==========================================================================
+        // 📸 PIPELINE A: SCAN THE TOP ROW (OPEN MELDS & FLOWERS)
+        // ==========================================================================
+        let currentX_Top = 0;
+        let detectedTopTiles = [];
+        while (currentX_Top + approximateTileWidth <= dimensions.w) {
+          let rect = new window.cv.Rect(currentX_Top, 0, approximateTileWidth, dimensions.h);
+          let croppedTileMat = topMatGray.roi(rect); 
+          let highestMatchScore = -1;
+          let bestMatchedTileObject = null;
           
-          // Clean thresholding tailored exactly to isolate distinct characters cleanly
-          window.cv.threshold(gray, thresh, 120, 255, window.cv.THRESH_BINARY_INV);
-          
-          let contours = new window.cv.MatVector();
-          let hierarchy = new window.cv.Mat();
-          window.cv.findContours(thresh, contours, hierarchy, window.cv.RETR_EXTERNAL, window.cv.CHAIN_APPROX_SIMPLE);
-          
-          let detectedTilesInRow = [];
-          for (let i = 0; i < contours.size(); ++i) {
-            let cnt = contours.get(i);
-            let rect = window.cv.boundingRect(cnt);
-            let area = rect.width * rect.height;
+          for (let tileId in this.tilePixelTemplates) {
+            let templateMat = this.tilePixelTemplates[tileId];
+            let resizedTemplate = new window.cv.Mat();
             
-            // Tighter dimensions barrier to filter out table reflections and noise blocks
-            if (rect.width > 30 && rect.height > 45 && area > 1500 && area < 25000) {
-              detectedTilesInRow.push({ rect: rect, contour: cnt });
+            // Scaled precisely to map your full-face drawings nicely
+            let targetW = Math.floor(approximateTileWidth * templateScaleFactor);
+            let targetH = Math.floor(dimensions.h * templateScaleFactor);
+            let targetSize = new window.cv.Size(targetW, targetH);
+            window.cv.resize(templateMat, resizedTemplate, targetSize, 0, 0, window.cv.INTER_LINEAR);
+            
+            let matchResult = new window.cv.Mat();
+            window.cv.matchTemplate(croppedTileMat, resizedTemplate, matchResult, window.cv.TM_CCOEFF_NORMED);
+            let minMax = window.cv.minMaxLoc(matchResult);
+            
+            if (minMax.maxVal > highestMatchScore) {
+              highestMatchScore = minMax.maxVal;
+              bestMatchedTileObject = window.HandOrganizer.tileRegistry.find(t => t.id === tileId);
             }
+            resizedTemplate.delete();
+            matchResult.delete();
           }
           
-          // Sort layout left-to-right across your dashboard workbench tracking line
-          detectedTilesInRow.sort((a, b) => a.rect.x - b.rect.x);
-          
-          detectedTilesInRow.forEach((tileObj, tIdx) => {
-            let croppedTile = thresh.roi(tileObj.rect);
-            let matchFound = false;
-            let bestMatchId = null;
-            
-            // 1. STABILIZED BLOB GEOMETRY ANALYSIS (Tongs & Suos)
-            let internalContours = new window.cv.MatVector();
-            let intHierarchy = new window.cv.Mat();
-            window.cv.findContours(croppedTile, internalContours, intHierarchy, window.cv.RETR_TREE, window.cv.CHAIN_APPROX_SIMPLE);
-            
-            let circleCount = 0;
-            let barCount = 0;
-            
-            for (let j = 0; j < internalContours.size(); ++j) {
-              let c = internalContours.get(j);
-              let r = window.cv.boundingRect(c);
-              let aspect = r.width / r.height;
-              let innerArea = r.width * r.height;
-              
-              // Tighter geometric shape gates to prevent background patterns from breaking layout
-              if (aspect >= 0.85 && aspect <= 1.15 && r.width > 8 && innerArea > 60) circleCount++;
-              if (aspect >= 0.15 && aspect <= 0.35 && r.height > 15) barCount++;
-            }
-            
-            if (circleCount >= 1 && circleCount <= 9) {
-              bestMatchId = `T_TONG_${circleCount}`;
-              matchFound = true;
-            } else if (barCount >= 1 && barCount <= 9) {
-              bestMatchId = `T_SUO_${barCount}`;
-              matchFound = true;
-            }
-            
-            // 2. ROBUST GATED FEATURE FILTER ENGINE (Wans, Winds, Dragons)
-            if (!matchFound) {
-              let highestValidMatches = 0;
-              
-              let orb = new window.cv.ORB();
-              let kp1 = new window.cv.KeyPointVector();
-              let desc1 = new window.cv.Mat();
-              orb.detectAndCompute(croppedTile, new window.cv.Mat(), kp1, desc1);
-              
-              for (let tileId in this.tilePixelTemplates) {
-                if (tileId.includes("TONG") || tileId.includes("SUO")) continue;
-                
-                let templateMat = this.tilePixelTemplates[tileId];
-                let kp2 = new window.cv.KeyPointVector();
-                let desc2 = new window.cv.Mat();
-                orb.detectAndCompute(templateMat, new window.cv.Mat(), kp2, desc2);
-                
-                if (!desc1.empty() && !desc2.empty()) {
-                  let matcher = new window.cv.BFMatcher(window.cv.NORM_HAMMING, false);
-                  let matches = new window.cv.DMatchVectorVector();
-                  
-                  // Run a k-Nearest Neighbor query to implement an elite distance validation check
-                  matcher.knnMatch(desc1, desc2, matches, 2);
-                  let strictGoodCount = 0;
-                  
-                  for (let k = 0; k < matches.size(); ++k) {
-                    let matchPair = matches.get(k);
-                    if (matchPair.size() >= 2) {
-                      let m1 = matchPair.get(0);
-                      let m2 = matchPair.get(1);
-                      // Lowe's Ratio Filter: Only count it if the match is distinctly clear
-                      if (m1.distance < 0.75 * m2.distance) {
-                        strictGoodCount++;
-                      }
-                    }
-                  }
-                  
-                  // Requires a minimum threshold of 6 strong, clear matching structural layout traits
-                  if (strictGoodCount > highestValidMatches && strictGoodCount >= 6) {
-                    highestValidMatches = strictGoodCount;
-                    bestMatchId = tileId;
-                  }
-                  matcher.delete(); matches.delete();
-                }
-                kp2.delete(); desc2.delete();
-              }
-              kp1.delete(); desc1.delete(); orb.delete();
-            }
-            
-            // 3. SECURE SEAT STATE ROW INJECTION
-            if (bestMatchId) {
-              let matchedObject = window.HandOrganizer.tileRegistry.find(t => t.id === bestMatchId);
-              if (matchedObject) {
-                if (rowObj.isTopRow) {
-                  window.HandOrganizer.handLayout.meldedSets.push({
-                    type: "pung",
-                    concealed: false,
-                    tiles: [ { ...matchedObject } ]
-                  });
-                } else {
-                  let isFarRight = (tIdx === detectedTilesInRow.length - 1);
-                  if (isFarRight) {
-                    window.HandOrganizer.handLayout.winningTile = { ...matchedObject };
-                  } else {
-                    window.HandOrganizer.handLayout.concealedTiles.push({ ...matchedObject });
-                  }
-                }
-              }
-            }
-            
-            croppedTile.delete();
-            internalContours.delete();
-            intHierarchy.delete();
-          });
-          
-          gray.delete(); thresh.delete(); contours.delete(); hierarchy.delete();
+          // Gated strictly to 0.72 to block false positives from your background laptop or dark desk surface
+          if (bestMatchedTileObject && highestMatchScore > 0.72) {
+            console.log(`Top Row Match Success: [${bestMatchedTileObject.id}] Score: ${highestMatchScore.toFixed(3)}`);
+            detectedTopTiles.push({ ...bestMatchedTileObject });
+          }
+          croppedTileMat.delete();
+          currentX_Top += approximateTileWidth;
+        }
+        
+        // Populate Top Row DOM elements safely
+        let flowerCountDetected = 0;
+        detectedTopTiles.forEach(tile => {
+          if (tile.pool === "FLOWER" || tile.pool === "SEASON") {
+            flowerCountDetected++;
+          } else {
+            window.HandOrganizer.handLayout.meldedSets.push({
+              type: "pung",
+              concealed: false,
+              tiles: [ { ...tile } ]
+            });
+          }
         });
-
+        
+        // ==========================================================================
+        // 📸 PIPELINE B: SCAN THE BOTTOM ROW (CONCEALED TILES & WINNING TILE)
+        // ==========================================================================
+        let currentX_Bot = 0;
+        let looseTilesStaging = [];
+        while (currentX_Bot + approximateTileWidth <= dimensions.w) {
+          let isFarRightTile = (currentX_Bot + (approximateTileWidth * 1.5) > dimensions.w);
+          let rect = new window.cv.Rect(currentX_Bot, 0, approximateTileWidth, dimensions.h);
+          let croppedTileMat = bottomMatGray.roi(rect);
+          let highestMatchScore = -1;
+          let bestMatchedTileObject = null;
+          
+          for (let tileId in this.tilePixelTemplates) {
+            let templateMat = this.tilePixelTemplates[tileId];
+            let resizedTemplate = new window.cv.Mat();
+            
+            let targetW = Math.floor(approximateTileWidth * templateScaleFactor);
+            let targetH = Math.floor(dimensions.h * templateScaleFactor);
+            let targetSize = new window.cv.Size(targetW, targetH);
+            window.cv.resize(templateMat, resizedTemplate, targetSize, 0, 0, window.cv.INTER_LINEAR);
+            
+            let matchResult = new window.cv.Mat();
+            window.cv.matchTemplate(croppedTileMat, resizedTemplate, matchResult, window.cv.TM_CCOEFF_NORMED);
+            let minMax = window.cv.minMaxLoc(matchResult);
+            
+            if (minMax.maxVal > highestMatchScore) {
+              highestMatchScore = minMax.maxVal;
+              bestMatchedTileObject = window.HandOrganizer.tileRegistry.find(t => t.id === tileId);
+            }
+            resizedTemplate.delete();
+            matchResult.delete();
+          }
+          
+          if (bestMatchedTileObject && highestMatchScore > 0.72) {
+            if (isFarRightTile) {
+              window.HandOrganizer.handLayout.winningTile = { ...bestMatchedTileObject };
+            } else {
+              looseTilesStaging.push({ ...bestMatchedTileObject });
+            }
+          }
+          croppedTileMat.delete();
+          currentX_Bot += approximateTileWidth;
+        }
+        
+        window.HandOrganizer.handLayout.concealedTiles = looseTilesStaging;
+        
+        // Cleanup Grayscale Mats
         topMatSrc.delete(); bottomMatSrc.delete();
+        topMatGray.delete(); bottomMatGray.delete();
+        
+        console.log("OpenCV baseline template matrix match loop complete.");
         window.HandOrganizer.refreshDOM();
-        customAlert("AI Scanner processing complete!");
-      } catch (err) {
-        console.error("AI dynamic analysis block failed: ", err);
+        customAlert("AI Scanning Complete! Board synchronized cleanly.");
+      } catch (opencvError) {
+        console.error("OpenCV processing crashed: ", opencvError);
       }
     }, 150);
   }
