@@ -145,9 +145,10 @@ const CameraEngine = {
     
     this.executeTemplateMatching();
   },
-  // Rebuilt Part 3: Hybrid Contour & ORB Feature Matching Engine
+  
+  // Stabilized Part 3: Noise-Filtered Hybrid Contour & Distance-Gated ORB Matcher
   async executeTemplateMatching() {
-    console.log("Hybrid AI template matching loop entered.");
+    console.log("Noise-Filtered AI template matching loop entered.");
     
     if (!window.cv || typeof window.cv.Mat !== "function") {
       return customAlert("AI Engine Error: OpenCV layer unavailable.");
@@ -161,7 +162,6 @@ const CameraEngine = {
     
     setTimeout(() => {
       try {
-        // Init row frames
         let topMatSrc = window.cv.matFromImageData(topRow);
         let bottomMatSrc = window.cv.matFromImageData(bottomRow);
         
@@ -174,28 +174,27 @@ const CameraEngine = {
           let gray = new window.cv.Mat();
           let thresh = new window.cv.Mat();
           window.cv.cvtColor(rowObj.mat, gray, window.cv.COLOR_RGBA2GRAY);
-          // High-contrast adaptive binarization to extract sharp borders
-          window.cv.adaptiveThreshold(gray, thresh, 255, window.cv.ADAPTIVE_THRESH_GAUSSIAN_C, window.cv.THRESH_BINARY_INV, 15, 3);
           
-          // 1. DYNAMIC CONTOUR ISOLATION (Find the real tiles on the table)
+          // Clean thresholding tailored exactly to isolate distinct characters cleanly
+          window.cv.threshold(gray, thresh, 120, 255, window.cv.THRESH_BINARY_INV);
+          
           let contours = new window.cv.MatVector();
           let hierarchy = new window.cv.Mat();
           window.cv.findContours(thresh, contours, hierarchy, window.cv.RETR_EXTERNAL, window.cv.CHAIN_APPROX_SIMPLE);
           
           let detectedTilesInRow = [];
-          
           for (let i = 0; i < contours.size(); ++i) {
             let cnt = contours.get(i);
             let rect = window.cv.boundingRect(cnt);
             let area = rect.width * rect.height;
             
-            // Filter out noise / small specks (adjust threshold based on distance)
-            if (rect.width > 25 && rect.height > 40 && area > 1000) {
+            // Tighter dimensions barrier to filter out table reflections and noise blocks
+            if (rect.width > 30 && rect.height > 45 && area > 1500 && area < 25000) {
               detectedTilesInRow.push({ rect: rect, contour: cnt });
             }
           }
           
-          // Sort tiles from left to right across the table
+          // Sort layout left-to-right across your dashboard workbench tracking line
           detectedTilesInRow.sort((a, b) => a.rect.x - b.rect.x);
           
           detectedTilesInRow.forEach((tileObj, tIdx) => {
@@ -203,7 +202,7 @@ const CameraEngine = {
             let matchFound = false;
             let bestMatchId = null;
             
-            // 2. SUIT FAMILY CLASSIFICTION VIA BLOB COUNTING (Tongs & Suos)
+            // 1. STABILIZED BLOB GEOMETRY ANALYSIS (Tongs & Suos)
             let internalContours = new window.cv.MatVector();
             let intHierarchy = new window.cv.Mat();
             window.cv.findContours(croppedTile, internalContours, intHierarchy, window.cv.RETR_TREE, window.cv.CHAIN_APPROX_SIMPLE);
@@ -215,14 +214,13 @@ const CameraEngine = {
               let c = internalContours.get(j);
               let r = window.cv.boundingRect(c);
               let aspect = r.width / r.height;
+              let innerArea = r.width * r.height;
               
-              // If shape is close to a perfect circle square boundary, track it as a Tong element
-              if (aspect >= 0.8 && aspect <= 1.2 && r.width > 6) circleCount++;
-              // If shape is long and skinny vertically, track it as a Suo bamboo bar element
-              if (aspect >= 0.1 && aspect <= 0.4 && r.height > 12) barCount++;
+              // Tighter geometric shape gates to prevent background patterns from breaking layout
+              if (aspect >= 0.85 && aspect <= 1.15 && r.width > 8 && innerArea > 60) circleCount++;
+              if (aspect >= 0.15 && aspect <= 0.35 && r.height > 15) barCount++;
             }
             
-            // Fast match bypass configurations for suit grids
             if (circleCount >= 1 && circleCount <= 9) {
               bestMatchId = `T_TONG_${circleCount}`;
               matchFound = true;
@@ -231,18 +229,16 @@ const CameraEngine = {
               matchFound = true;
             }
             
-            // 3. CHARACTERS FALLBACK ENGINE VIA ORB INTERSECTIONS (Wans, Winds, Dragons)
+            // 2. ROBUST GATED FEATURE FILTER ENGINE (Wans, Winds, Dragons)
             if (!matchFound) {
-              let highestFeatureScore = 0;
+              let highestValidMatches = 0;
               
-              // Setup ORB feature analyzer configuration
               let orb = new window.cv.ORB();
               let kp1 = new window.cv.KeyPointVector();
               let desc1 = new window.cv.Mat();
               orb.detectAndCompute(croppedTile, new window.cv.Mat(), kp1, desc1);
               
               for (let tileId in this.tilePixelTemplates) {
-                // Ignore the suit tiles we processed above
                 if (tileId.includes("TONG") || tileId.includes("SUO")) continue;
                 
                 let templateMat = this.tilePixelTemplates[tileId];
@@ -250,37 +246,49 @@ const CameraEngine = {
                 let desc2 = new window.cv.Mat();
                 orb.detectAndCompute(templateMat, new window.cv.Mat(), kp2, desc2);
                 
-                // Track corner intersections layout compatibility scores safely
-                let matcher = new window.cv.BFMatcher(window.cv.NORM_HAMMING, true);
-                let matches = new window.cv.DMatchVector();
-                
                 if (!desc1.empty() && !desc2.empty()) {
-                  matcher.match(desc1, desc2, matches);
-                  let goodMatchesCount = matches.size();
+                  let matcher = new window.cv.BFMatcher(window.cv.NORM_HAMMING, false);
+                  let matches = new window.cv.DMatchVectorVector();
                   
-                  if (goodMatchesCount > highestFeatureScore) {
-                    highestFeatureScore = goodMatchesCount;
+                  // Run a k-Nearest Neighbor query to implement an elite distance validation check
+                  matcher.knnMatch(desc1, desc2, matches, 2);
+                  let strictGoodCount = 0;
+                  
+                  for (let k = 0; k < matches.size(); ++k) {
+                    let matchPair = matches.get(k);
+                    if (matchPair.size() >= 2) {
+                      let m1 = matchPair.get(0);
+                      let m2 = matchPair.get(1);
+                      // Lowe's Ratio Filter: Only count it if the match is distinctly clear
+                      if (m1.distance < 0.75 * m2.distance) {
+                        strictGoodCount++;
+                      }
+                    }
+                  }
+                  
+                  // Requires a minimum threshold of 6 strong, clear matching structural layout traits
+                  if (strictGoodCount > highestValidMatches && strictGoodCount >= 6) {
+                    highestValidMatches = strictGoodCount;
                     bestMatchId = tileId;
                   }
+                  matcher.delete(); matches.delete();
                 }
-                kp2.delete(); desc2.delete(); matcher.delete(); matches.delete();
+                kp2.delete(); desc2.delete();
               }
               kp1.delete(); desc1.delete(); orb.delete();
             }
             
-            // Inject successful matches into active board UI slots layer counters
+            // 3. SECURE SEAT STATE ROW INJECTION
             if (bestMatchId) {
               let matchedObject = window.HandOrganizer.tileRegistry.find(t => t.id === bestMatchId);
               if (matchedObject) {
                 if (rowObj.isTopRow) {
-                  // Top row tracker injection mapping
-                  if (matchedObject.pool === "FLOWER" || matchedObject.pool === "SEASON") {
-                    // Update global UI count increments asynchronously
-                  } else {
-                    window.HandOrganizer.handLayout.meldedSets.push({ type: "pung", concealed: false, tiles: [ { ...matchedObject } ] });
-                  }
+                  window.HandOrganizer.handLayout.meldedSets.push({
+                    type: "pung",
+                    concealed: false,
+                    tiles: [ { ...matchedObject } ]
+                  });
                 } else {
-                  // Bottom row tracker injection mapping
                   let isFarRight = (tIdx === detectedTilesInRow.length - 1);
                   if (isFarRight) {
                     window.HandOrganizer.handLayout.winningTile = { ...matchedObject };
@@ -301,10 +309,9 @@ const CameraEngine = {
 
         topMatSrc.delete(); bottomMatSrc.delete();
         window.HandOrganizer.refreshDOM();
-        customAlert("AI Scanning Complete: Hybrid layout tracker synced successfully!");
+        customAlert("AI Scanner processing complete!");
       } catch (err) {
-        console.error("AI Analysis crash context error: ", err);
-        customAlert("AI Tracking Error: Ensure lighting remains completely flat.");
+        console.error("AI dynamic analysis block failed: ", err);
       }
     }, 150);
   }
