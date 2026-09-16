@@ -513,3 +513,46 @@ body {
     background-color: var(--primary-green) !important;
     box-shadow: 0 2px 6px rgba(46, 204, 113, 0.4);
 }
+/* ==========================================================================
+ 6. PURE RESPONSIVE MOBILE & TABLET FLEX RECOVERY OVERRIDES
+ ========================================================================== */
+@media screen and (max-width: 768px) {
+    /* Force the main layout split grid to stack vertically instead of side-by-side */
+    .workspace-split {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+
+    /* Shrink the tile selection panels to completely fit the phone body width */
+    .calc-container {
+        padding: 10px !important;
+        overflow-hidden: hidden;
+    }
+
+    /* Recover flex layout on the row headers so items stack if text hits screen limits */
+    .display-row > div:first-child {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 6px !important;
+        white-space: normal !important; /* Allow natural single text wraps on tiny screens */
+    }
+
+    /* Make the pill buttons stretch comfortably to full container bounds on phones */
+    .inline-radio-group {
+        width: 100% !important;
+        display: flex !important;
+        justify-content: space-between;
+    }
+
+    .inline-radio-group .radio-label {
+        flex: 1 !important;
+        justify-content: center;
+        text-align: center;
+    }
+
+    /* Prevent text overflowing inside the selection card deck blocks */
+    .deck-row {
+        justify-content: center !important;
+    }
+}
