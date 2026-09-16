@@ -233,46 +233,48 @@
  ========================================================================== -->
 <div class="display-section">
  
- <!-- Row 1: Declared Open Melded Sets -->
- <div class="display-row" style="margin-bottom: 12px;">
- <div style="display: flex; justify-content: space-between; align-items: center; white-space: nowrap; gap: 15px; margin-bottom: 6px;">
- <div class="display-row-title" style="margin-bottom: 0;">Melded Sets (Click Block to Delete)</div>
- <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="chow" checked> chow</label>
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="pung"> pung</label>
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="melded_kong"> kong</label>
- </div>
- </div>
- <div id="display-melded-sets" class="slots-container"></div>
- </div>
+  <!-- Row 1: Declared Open Melded Sets -->
+  <div class="display-row" style="margin-bottom: 12px;">
+    <!-- Removed inline white-space style to allow graceful responsive internal wrapping -->
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 6px;">
+      <div class="display-row-title" style="margin-bottom: 0;">Open Melds (Click Block to Delete)</div>
+      <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="chow" checked> chow</label>
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="pung"> pung</label>
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="melded_kong"> kong</label>
+      </div>
+    </div>
+    <div id="display-melded-sets" class="slots-container"></div>
+  </div>
 
- <!-- Row 2: Concealed Tiles Segment -->
- <div class="display-row" style="margin-bottom: 12px;">
- <div style="display: flex; justify-content: space-between; align-items: center; white-space: nowrap; gap: 15px; margin-bottom: 6px;">
- <div class="display-row-title" style="margin-bottom: 0;">Concealed Tiles (Click Tile to Remove)</div>
- <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_chow"> chow</label>
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_pung"> pung</label>
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_kong"> kong</label>
- <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_tile"> tile</label>
- </div>
- </div>
- <div id="display-concealed-tiles" class="slots-container standard-hand-line"></div>
- </div>
+  <!-- Row 2: Concealed Tiles Segment -->
+  <div class="display-row" style="margin-bottom: 12px;">
+    <!-- Removed inline white-space style to allow graceful responsive internal wrapping -->
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 6px;">
+      <div class="display-row-title" style="margin-bottom: 0;">Concealed Tiles (Click Tile to Remove)</div>
+      <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_chow"> chow</label>
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_pung"> pung</label>
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_kong"> kong</label>
+        <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_tile"> tile</label>
+      </div>
+    </div>
+    <div id="display-concealed-tiles" class="slots-container standard-hand-line"></div>
+  </div>
 
- <!-- Row 3: Winning Tile Target Anchor -->
- <div class="display-row">
- <div style="display: flex; justify-content: space-between; align-items: center; white-space: nowrap; gap: 15px; margin-bottom: 6px;">
- <div class="display-row-title" style="margin-bottom: 0;">Winning Tile (Click to Clear)</div>
- <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
- <label class="radio-label" style="color: var(--primary-green); font-weight: bold; margin-bottom: 0;">
- <input type="radio" name="input-mode" value="winning_tile"> winning tile
- </label>
- </div>
- </div>
- <div id="display-winning-tile" class="slots-container"></div>
- </div>
-
+  <!-- Row 3: Winning Tile Target Anchor -->
+  <div class="display-row">
+    <!-- Removed inline white-space style to allow graceful responsive internal wrapping -->
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 15px; margin-bottom: 6px;">
+      <div class="display-row-title" style="margin-bottom: 0;">Winning Tile Target (Click to Clear)</div>
+      <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
+        <label class="radio-label" style="color: var(--primary-green); font-weight: bold; margin-bottom: 0;">
+          <input type="radio" name="input-mode" value="winning_tile"> winning tile
+        </label>
+      </div>
+    </div>
+    <div id="display-winning-tile" class="slots-container"></div>
+  </div>
  <div id="workbench-counter" class="deck-header" style="text-align: right; margin-top: 10px;">Tiles Loaded: 0 / 14</div>
 </div>
 
