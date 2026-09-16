@@ -228,22 +228,53 @@
             </div>
           </div>
 
-          <!-- DYNAMIC ACTIVE HAND BUILDER ROWS -->
-          <div class="display-section">
-            <div class="display-row">
-              <div class="display-row-title">Declared Open Melded Sets (Click block to delete)</div>
-              <div id="display-melded-sets" class="slots-container"></div>
-            </div>
-            <div class="display-row">
-              <div class="display-row-title">Concealed Tiles Segment (Click tile to remove)</div>
-              <div id="display-concealed-tiles" class="slots-container standard-hand-line"></div>
-            </div>
-            <div class="display-row">
-              <div class="display-row-title">Winning Tile Target Anchor (Click to clear)</div>
-              <div id="display-winning-tile" class="slots-container"></div>
-            </div>
-            <div id="workbench-counter" class="deck-header" style="text-align: right; margin-top: 5px;">Tiles Loaded: 0 / 14</div>
-          </div>
+<!-- ==========================================================================
+ DYNAMIC ACTIVE HAND BUILDER ROWS (COMPACT SINGLE-LINE FLOW)
+ ========================================================================== -->
+<div class="display-section">
+ 
+ <!-- Row 1: Declared Open Melded Sets -->
+ <div class="display-row" style="margin-bottom: 12px;">
+ <div style="display: flex; justify-content: space-between; align-items: center; white-space: nowrap; gap: 15px; margin-bottom: 6px;">
+ <div class="display-row-title" style="margin-bottom: 0;">Melded Sets (Click Block to Delete)</div>
+ <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="chow" checked> chow</label>
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="pung"> pung</label>
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="melded_kong"> kong</label>
+ </div>
+ </div>
+ <div id="display-melded-sets" class="slots-container"></div>
+ </div>
+
+ <!-- Row 2: Concealed Tiles Segment -->
+ <div class="display-row" style="margin-bottom: 12px;">
+ <div style="display: flex; justify-content: space-between; align-items: center; white-space: nowrap; gap: 15px; margin-bottom: 6px;">
+ <div class="display-row-title" style="margin-bottom: 0;">Concealed Tiles (Click Tile to Remove)</div>
+ <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_chow"> chow</label>
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_pung"> pung</label>
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_kong"> kong</label>
+ <label class="radio-label" style="margin-bottom: 0;"><input type="radio" name="input-mode" value="concealed_tile"> tile</label>
+ </div>
+ </div>
+ <div id="display-concealed-tiles" class="slots-container standard-hand-line"></div>
+ </div>
+
+ <!-- Row 3: Winning Tile Target Anchor -->
+ <div class="display-row">
+ <div style="display: flex; justify-content: space-between; align-items: center; white-space: nowrap; gap: 15px; margin-bottom: 6px;">
+ <div class="display-row-title" style="margin-bottom: 0;">Winning Tile (Click to Clear)</div>
+ <div class="inline-radio-group" style="display: flex; gap: 12px; align-items: center;">
+ <label class="radio-label" style="color: var(--primary-green); font-weight: bold; margin-bottom: 0;">
+ <input type="radio" name="input-mode" value="winning_tile"> winning tile
+ </label>
+ </div>
+ </div>
+ <div id="display-winning-tile" class="slots-container"></div>
+ </div>
+
+ <div id="workbench-counter" class="deck-header" style="text-align: right; margin-top: 10px;">Tiles Loaded: 0 / 14</div>
+</div>
 
           <!-- Hand Breakdown Ledger Panels -->
           <div id="report-panel" style="margin-top: 10px;">
@@ -261,13 +292,13 @@
           
           <!-- AUTOMATED TRANSACTION HUB -->
           <div class="panel-group" style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
-            <div class="panel-title" style="color: gold;">👥 Round Transaction Context</div>
+            <div class="panel-title" style="color: gold;">👥 Round Transaction</div>
             <div style="margin-bottom: 6px;">
               <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px;">ROUND WINNER</label>
               <select id="winner-player-select" onchange="SessionEngine.syncSidebarWinds()" style="border-color: var(--primary-green); color: #fff; background: var(--bg-dark); width: 100%; border-radius: 4px; min-height: 28px; font-size: 13px;"></select>
             </div>
             <div>
-              <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px;">WIN VICTORY METHOD PATH</label>
+              <label style="font-size: 11px; color: var(--text-dim); display: block; margin-bottom: 2px;">WIN BY:</label>
               <select id="loser-player-select" onchange="SessionEngine.syncVictoryMethodRadio()" style="color: #fff; background: var(--bg-dark); width: 100%; border-radius: 4px; min-height: 28px; font-size: 13px;">
                 <!-- Options are dynamically injected by player setup scripts -->
               </select>
@@ -292,89 +323,63 @@
                 <input type="hidden" id="wind-round" value="1">
               </div>
               <div class="half-width-select">
-                <div class="panel-title" style="font-size: 10px; margin-bottom: 2px;">Seat Wind Winner</div>
+                <div class="panel-title" style="font-size: 10px; margin-bottom: 2px;">Seat Wind</div>
                 <div id="text-wind-seat" style="font-size: 14px; font-weight: bold; color: var(--accent-blue);">-</div>
                 <input type="hidden" id="wind-seat" value="1">
               </div>
             </div>
           </div>
 
-          <!-- STREAMLINED COMPACT 2-COLUMN INPUT MODES SYSTEM -->
-          <div class="panel-group">
-            <div class="panel-title">Add To Hand Mode</div>
-            <div class="two-column-grid">
-              <!-- Column A: Open Melded Components -->
-              <div class="grid-mode-column">
-                <div class="sub-column-title">a. Open Melded</div>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="chow" checked> chow</label>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="pung"> pung</label>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="melded_kong"> kong</label>
-                <label class="radio-label nano-label" style="color: var(--primary-green); font-weight: bold; margin-top: 3px; border-top: 1px dashed #444; padding-top: 3px;">
-                  <input type="radio" name="input-mode" value="winning_tile"> winning tile
-                </label>
-
-              </div>
-              <!-- Column B: Concealed Elements & Nested Winning Anchor -->
-              <div class="grid-mode-column">
-                <div class="sub-column-title">b. Concealed / Anchor</div>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_chow"> chow</label>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_pung"> pung</label>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_kong"> kong</label>
-                <label class="radio-label nano-label"><input type="radio" name="input-mode" value="concealed_tile"> single / pair</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- ADDITIONAL STATUS MODIFIERS CRITERIA -->
-          <div class="panel-group">
-            <div class="panel-title">Additional Criteria</div>
-            <div class="two-column-grid">
-              <div class="grid-mode-column">
-                <label class="check-label nano-label"><input type="checkbox" id="param-last-tile"> Last Tile</label>
-                <label class="check-label nano-label"><input type="checkbox" id="param-last-kind"> Last Kind</label>
-              </div>
-              <div class="grid-mode-column">
-                <label class="check-label nano-label"><input type="checkbox" id="param-replacement"> Replacement</label>
-                <label class="check-label nano-label"><input type="checkbox" id="param-robbing"> Robbing Kong</label>
-              </div>
-            </div>
-          </div>
-
-          <!-- FLOWERS DISPLAY WRAP CONSOLE -->
-          <div class="panel-group">
-            <div class="panel-title">🌸 Flowers & Seasons</div>
-            <div id="mcr-flower-ui" class="side-by-side-row" style="margin-bottom: 8px;">
-              <label class="radio-label half-width-select" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                <span style="font-size: 11px; color: var(--text-dim);">MCR BONUS TILES COUNT</span>
-                <select id="mcr-flowers-count" style="color: #fff; background: var(--bg-dark); width: 100%;">
-                  <option value="0">0 Flowers</option>
-                  <option value="1">1 Flower (+1 Pt)</option>
-                  <option value="2">2 Flowers (+2 Pts)</option>
-                  <option value="3">3 Flowers (+3 Pts)</option>
-                  <option value="4">4 Flowers (+4 Pts)</option>
-                  <option value="5">5 Flowers (+5 Pts)</option>
-                  <option value="6">6 Flowers (+6 Pts)</option>
-                  <option value="7">7 Flowers (+7 Pts)</option>
-                  <option value="8">8 Flowers (+8 Pts)</option>
-                </select>
-              </label>
-            </div>
-            <div id="hk-flower-ui" style="display: none; flex-direction: column; gap: 8px;">
-              <div class="side-by-side-row">
-                <label class="radio-label half-width-select" style="flex-direction: column; align-items: flex-start; gap: 4px;">
-                  <span style="font-size: 11px; color: var(--text-dim);">HONG KONG FLOWER STATUS</span>
-                  <select id="hk-flower-condition" style="color: #fff; background: var(--bg-dark); width: 100%;">
-                    <option value="NO_FLOWERS">No Flowers [+1]</option>
-                    <option value="ONE_MATCH">1 Flowers [+1]</option>
-                    <option value="TWO_MATCH">2 Flowers [+2]</option>
-                    <option value="ALL_FLOWERS">4 Flowers [+2]</option>
-                    <option value="ALL_SEASONS">4 Seasons [+2]</option>
-                    <option value="COMPLETE_EIGHT">8 Flowers [+8]</option>
-                  </select>
-                </label>
-              </div>
-            </div>
-          </div>
+ <!-- STREAMLINED ADDITIONAL STATUS MODIFIERS CRITERIA -->
+ <div class="panel-group">
+ <div class="panel-title">Additional Criteria</div>
+ <div class="two-column-grid">
+ <div class="grid-mode-column">
+ <label class="check-label nano-label"><input type="checkbox" id="param-last-tile"> Last Tile</label>
+ <label class="check-label nano-label"><input type="checkbox" id="param-last-kind"> Last Kind</label>
+ </div>
+ <div class="grid-mode-column">
+ <label class="check-label nano-label"><input type="checkbox" id="param-replacement"> Replacement</label>
+ <label class="check-label nano-label"><input type="checkbox" id="param-robbing"> Robbing Kong</label>
+ </div>
+ </div>
+ </div>
+ 
+ <!-- FLOWERS DISPLAY WRAP CONSOLE -->
+ <div class="panel-group">
+ <div class="panel-title">🌸 Flowers & Seasons</div>
+ <div id="mcr-flower-ui" class="side-by-side-row" style="margin-bottom: 8px;">
+ <label class="radio-label half-width-select" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+ <span style="font-size: 11px; color: var(--text-dim);">MCR BONUS TILES COUNT</span>
+ <select id="mcr-flowers-count" style="color: #fff; background: var(--bg-dark); width: 100%;">
+ <option value="0">0 Flowers</option>
+ <option value="1">1 Flower (+1 Pt)</option>
+ <option value="2">2 Flowers (+2 Pts)</option>
+ <option value="3">3 Flowers (+3 Pts)</option>
+ <option value="4">4 Flowers (+4 Pts)</option>
+ <option value="5">5 Flowers (+5 Pts)</option>
+ <option value="6">6 Flowers (+6 Pts)</option>
+ <option value="7">7 Flowers (+7 Pts)</option>
+ <option value="8">8 Flowers (+8 Pts)</option>
+ </select>
+ </label>
+ </div>
+ <div id="hk-flower-ui" style="display: none; flex-direction: column; gap: 8px;">
+ <div class="side-by-side-row">
+ <label class="radio-label half-width-select" style="flex-direction: column; align-items: flex-start; gap: 4px;">
+ <span style="font-size: 11px; color: var(--text-dim);">HONG KONG FLOWER STATUS</span>
+ <select id="hk-flower-condition" style="color: #fff; background: var(--bg-dark); width: 100%;">
+ <option value="NO_FLOWERS">No Flowers [+1]</option>
+ <option value="ONE_MATCH">1 Flowers [+1]</option>
+ <option value="TWO_MATCH">2 Flowers [+2]</option>
+ <option value="ALL_FLOWERS">4 Flowers [+2]</option>
+ <option value="ALL_SEASONS">4 Seasons [+2]</option>
+ <option value="COMPLETE_EIGHT">8 Flowers [+8]</option>
+ </select>
+ </label>
+ </div>
+ </div>
+ </div>
 
           <!-- WORKSPACE ACTIONS TRIGGERS BUTTONS -->
           <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
@@ -394,6 +399,9 @@
   <!-- ==========================================================================
        CRITICAL APPLICATION BACKBONE ENGINE LOADING ORDER PIPELINE
        ========================================================================== -->
+  <script src="tf.js"></script>
+  <script src="mobilenet.js"></script>
+  <script src="knn-classifier.js"></script>
   <script src="handOrganizer.js"></script>
   <script src="scoreEngineCore.js"></script>
   <script src="scoreEngineParser.js"></script>
@@ -433,9 +441,6 @@
       }
     }
   </script>
-
-  <!-- 2. EXECUTE THE LOCAL OFFLINE GEOMETRIC PARSING BRAIN -->
-  <script src="opencv.js" onload="onOpenCvReady()"></script>
 
   <!-- 3. Ledger Session Infrastructure Scripts -->
   <script src="sessionCore.js"></script>

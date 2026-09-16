@@ -77,7 +77,7 @@ Object.assign(SessionEngine, {
     
     if (selectWinner && selectLoser) {
       selectWinner.innerHTML = "";
-      selectLoser.innerHTML = `<option value="all">All Players (Self-Draw / Zi Mo)</option>`;
+      selectLoser.innerHTML = `<option value="all">Self-Draw</option>`;
       
       this.gameState.players.forEach((p, idx) => {
         selectWinner.innerHTML += `<option value="${idx}">${p.name} (${this.getWindString(p.currentSeat)})</option>`;

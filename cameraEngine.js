@@ -1,92 +1,79 @@
 /**
- * cameraEngine.js - Part 1: Monochrome Silhouette Stencil Database Cacher (Path Fixed)
+ * cameraEngine.js - TensorFlow.js + MobileNet KNN Offline AI Edition
  */
 const CameraEngine = {
   streamInstance: null,
-  tilePixelTemplates: {}, // Holds binary mask matrices for shape matching
   lastCapturedHand: null,
+  
+  // Neural Net Storage Buffers
+  mobilenetModel: null,
+  knnClassifier: null,
+  isAiPrimed: false,
 
-  // Asynchronous wrapper utility to safely load local template PNG assets
+  // Async wrapper to load reference images cleanly
   loadImageAsset(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
+      img.crossOrigin = "Anonymous"; // Block canvas context security halts
       img.onload = () => resolve(img);
-      img.onerror = (err) => reject(new Error(`Failed loading asset path: ${src}`));
+      img.onerror = (err) => reject(new Error(`Failed loading asset: ${src}`));
       img.src = src;
     });
   },
 
+  // 1. OFFLINE BRAIN INITIALIZER (Trains the model inside your browser memory)
   async initializeTemplateDatabase() {
-    const currentCachedCount = Object.keys(this.tilePixelTemplates).length;
-    if (currentCachedCount >= 34) {
-      console.log(`AI Engine: Database is already primed with ${currentCachedCount} cached tiles.`);
-      return true;
-    }
+    if (this.isAiPrimed) return true;
 
     if (!window.HandOrganizer || !window.HandOrganizer.tileRegistry || window.HandOrganizer.tileRegistry.length === 0) {
-      console.warn("AI Engine Delay: HandOrganizer tile registry is empty or uninitialized.");
+      console.warn("AI Engine Delay: Tile registry uninitialized.");
       return false;
     }
 
-    console.log("AI Scanner: Initiating shape-grounded monochrome rasterization matrix...");
+    console.log("TF.js Loading: Initializing MobileNet feature neural network layer...");
+    customAlert("AI Initializing: Downloading lightweight model architecture...");
+    
+    // Load the pre-trained feature extractor models
+    this.mobilenetModel = await mobilenet.load({ version: 1, alpha: 0.25 }); // 0.25 keeps it ultra-light for mobile
+    this.knnClassifier = knnClassifier.create();
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d", { willReadFrequently: true });
-    canvas.width = 64; 
-    canvas.height = 84;
-    let loadedCount = 0;
+    console.log("TF.js Training: Passing your ref_img folder through the neural network...");
+    customAlert("AI Training: Rasterizing your custom tile stencils...");
 
     for (let tile of window.HandOrganizer.tileRegistry) {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       try {
-        // FIXED PATH MAPPING LOGIC:
-        // Converts "image/wan1.svg" directly into "./ref_img/wan1.png" to match your exact filenames perfectly!
+        // Map paths directly to your newly scanned PNGs
         const targetPath = "./" + tile.img.replace("image/", "ref_img/").replace(".svg", ".png");
         const visualAsset = await this.loadImageAsset(targetPath);
-
-        // Draw pristine square reference image into memory
-        ctx.drawImage(visualAsset, 0, 0, canvas.width, canvas.height);
-        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         
-        if (window.cv && window.cv.matFromImageData) {
-          let srcMat = window.cv.matFromImageData(imgData);
-          let grayMat = new window.cv.Mat();
-          let binaryMat = new window.cv.Mat();
+        // Pass image through TensorFlow tensors
+        const tfActivation = tf.tidy(() => {
+          const tfImg = tf.browser.fromPixels(visualAsset);
+          // Resize precisely to MobileNet's expected input dimensions
+          const resizedImg = tf.image.resizeBilinear(tfImg, [224, 224]);
+          // Extract the high-level geometric feature descriptions
+          return this.mobilenetModel.infer(resizedImg, 'conv_preds');
+        });
 
-          // 1. Flatten into grayscale channel
-          window.cv.cvtColor(srcMat, grayMat, window.cv.COLOR_RGBA2GRAY);
-          
-          // 2. Invert threshold to cleanly isolate the black shapes on the white background
-          window.cv.threshold(grayMat, binaryMat, 128, 255, window.cv.THRESH_BINARY_INV);
-
-          if (this.tilePixelTemplates[tile.id]) {
-            this.tilePixelTemplates[tile.id].delete();
-          }
-
-          this.tilePixelTemplates[tile.id] = binaryMat;
-          srcMat.delete();
-          grayMat.delete();
-          loadedCount++;
-        }
-      } catch (assetException) {
-        console.error("AI Database Rasterization Error on item mapping:", tile.id, assetException);
+        // Add this specific mathematical embedding signature to our local memory bank
+        this.knnClassifier.addExample(tfActivation, tile.id);
+        tfActivation.dispose(); // Instantly clean GPU/CPU memory leaks
+      } catch (err) {
+        console.error(`AI Training Error on item map [${tile.id}]:`, err);
       }
     }
 
-    console.log(`AI Database Sync Success: Primed [${loadedCount} / 34] stencils!`);
-    return loadedCount >= 34;
+    console.log("TF.js Sync Success: Neural memory bank successfully primed!");
+    this.isAiPrimed = true;
+    return true;
   },
-  /**
-   * cameraEngine.js - Part 2: Hardware Control & Image Frame Slicer
-   */
+
   async openCameraScanner() {
     const scannerScreen = document.getElementById("camera-scanner-screen");
     const videoFeed = document.getElementById("camera-stream-feed");
     if (!scannerScreen || !videoFeed) return;
-
+    
     await this.initializeTemplateDatabase();
-
     scannerScreen.style.display = "flex";
     try {
       const constraints = {
@@ -117,11 +104,10 @@ const CameraEngine = {
     const videoFeed = document.getElementById("camera-stream-feed");
     const processingCanvas = document.getElementById("camera-processing-canvas");
     if (!videoFeed || !processingCanvas) return;
-
+    
     const ctx = processingCanvas.getContext("2d");
     const width = videoFeed.videoWidth || 1280;
     const height = videoFeed.videoHeight || 720;
-
     processingCanvas.width = width;
     processingCanvas.height = height;
     ctx.drawImage(videoFeed, 0, 0, width, height);
@@ -131,12 +117,12 @@ const CameraEngine = {
     const startX = Math.floor((width - boxWidth) / 2);
     const startY = Math.floor((height - boxHeight) / 2);
     const rowHeight = Math.floor(boxHeight / 2);
-
+    
+    // Snip our data frames
     const topRowImageBlock = ctx.getImageData(startX, startY, boxWidth, rowHeight);
     const bottomRowImageBlock = ctx.getImageData(startX, startY + rowHeight, boxWidth, rowHeight);
     
     this.closeCameraScanner();
-
     this.lastCapturedHand = {
       topRow: topRowImageBlock,
       bottomRow: bottomRowImageBlock,
@@ -145,156 +131,78 @@ const CameraEngine = {
     
     this.executeTemplateMatching();
   },
-  
-  // Rebuilt Part 3: Robust Full-Tile Grayscale Template Matcher
+
+  // 3. AI PREDICTION ENGINE (Evaluates camera frames via TensorFlow vector proximity)
   async executeTemplateMatching() {
-    console.log("Full-Tile Grayscale template matching loop entered.");
-    
-    if (!window.cv || typeof window.cv.Mat !== "function") {
-      return customAlert("AI Engine Error: OpenCV compilation layer is unavailable.");
+    if (!this.isAiPrimed || !this.knnClassifier) {
+      return customAlert("AI Error: Neural classifier layer is uninitialized.");
     }
-    if (!this.lastCapturedHand) {
-      return customAlert("Error: Image memory layer empty.");
-    }
-    const templatesList = Object.keys(this.tilePixelTemplates);
-    if (templatesList.length === 0) {
-      return customAlert("AI Processing Intercepted: Your offline tile template database is empty.");
-    }
-    
-    customAlert("AI Scanner processing active: Aligning tile contours...");
     if (window.HandOrganizer) window.HandOrganizer.clearHand();
-    
+
     const { topRow, bottomRow, dimensions } = this.lastCapturedHand;
     
-    setTimeout(() => {
-      try {
-        let topMatSrc = window.cv.matFromImageData(topRow);
-        let bottomMatSrc = window.cv.matFromImageData(bottomRow);
-        let topMatGray = new window.cv.Mat();
-        let bottomMatGray = new window.cv.Mat();
+    // Create temporary offscreen helper canvases to translate HTML ImageData blocks to Tensors smoothly
+    const tempCanvas = document.createElement("canvas");
+    const tempCtx = tempCanvas.getContext("2d");
+    const approxWidth = Math.floor(dimensions.w / 7.0);
+
+    const processRowAI = async (rowBlock, isTopRow) => {
+      tempCanvas.width = rowBlock.width;
+      tempCanvas.height = rowBlock.height;
+      tempCtx.putImageData(rowBlock, 0, 0);
+
+      let currentX = 0;
+      let detectedTiles = [];
+
+      while (currentX + approxWidth <= rowBlock.width) {
+        // Slice an individual tile out from the horizontal canvas lane strip
+        const tileSliceData = tempCtx.getImageData(currentX, 0, approxWidth, rowBlock.height);
         
-        // Clean grayscale flattening without aggressive shape distorting binary thresholding
-        window.cv.cvtColor(topMatSrc, topMatGray, window.cv.COLOR_RGBA2GRAY);
-        window.cv.cvtColor(bottomMatSrc, bottomMatGray, window.cv.COLOR_RGBA2GRAY);
-        
-        // The magical grid layout calculation fix:
-        // Divide by 7 elements since your hand spans exactly across the viewfinder row block width
-        const approximateTileWidth = Math.floor(dimensions.w / 7.0);
-        const templateScaleFactor = 0.92; // Lets your full-face drawings perfectly match camera dimensions
-        
-        // ==========================================================================
-        // 📸 PIPELINE A: SCAN THE TOP ROW (OPEN MELDS & FLOWERS)
-        // ==========================================================================
-        let currentX_Top = 0;
-        let detectedTopTiles = [];
-        while (currentX_Top + approximateTileWidth <= dimensions.w) {
-          let rect = new window.cv.Rect(currentX_Top, 0, approximateTileWidth, dimensions.h);
-          let croppedTileMat = topMatGray.roi(rect); 
-          let highestMatchScore = -1;
-          let bestMatchedTileObject = null;
+        // Pass slice directly into the Machine Learning prediction brain
+        const predictedId = tf.tidy(() => {
+          const tfImg = tf.browser.fromPixels(tileSliceData);
+          const resizedImg = tf.image.resizeBilinear(tfImg, [224, 224]);
+          const embedding = this.mobilenetModel.infer(resizedImg, 'conv_preds');
           
-          for (let tileId in this.tilePixelTemplates) {
-            let templateMat = this.tilePixelTemplates[tileId];
-            let resizedTemplate = new window.cv.Mat();
-            
-            // Scaled precisely to map your full-face drawings nicely
-            let targetW = Math.floor(approximateTileWidth * templateScaleFactor);
-            let targetH = Math.floor(dimensions.h * templateScaleFactor);
-            let targetSize = new window.cv.Size(targetW, targetH);
-            window.cv.resize(templateMat, resizedTemplate, targetSize, 0, 0, window.cv.INTER_LINEAR);
-            
-            let matchResult = new window.cv.Mat();
-            window.cv.matchTemplate(croppedTileMat, resizedTemplate, matchResult, window.cv.TM_CCOEFF_NORMED);
-            let minMax = window.cv.minMaxLoc(matchResult);
-            
-            if (minMax.maxVal > highestMatchScore) {
-              highestMatchScore = minMax.maxVal;
-              bestMatchedTileObject = window.HandOrganizer.tileRegistry.find(t => t.id === tileId);
-            }
-            resizedTemplate.delete();
-            matchResult.delete();
-          }
-          
-          // Gated strictly to 0.72 to block false positives from your background laptop or dark desk surface
-          if (bestMatchedTileObject && highestMatchScore > 0.72) {
-            console.log(`Top Row Match Success: [${bestMatchedTileObject.id}] Score: ${highestMatchScore.toFixed(3)}`);
-            detectedTopTiles.push({ ...bestMatchedTileObject });
-          }
-          croppedTileMat.delete();
-          currentX_Top += approximateTileWidth;
-        }
-        
-        // Populate Top Row DOM elements safely
-        let flowerCountDetected = 0;
-        detectedTopTiles.forEach(tile => {
-          if (tile.pool === "FLOWER" || tile.pool === "SEASON") {
-            flowerCountDetected++;
-          } else {
-            window.HandOrganizer.handLayout.meldedSets.push({
-              type: "pung",
-              concealed: false,
-              tiles: [ { ...tile } ]
-            });
-          }
+          // KNN runs an instant spatial index check to find the closest match reference string key
+          const prediction = this.knnClassifier.predictClass(embedding);
+          return prediction.label;
         });
-        
-        // ==========================================================================
-        // 📸 PIPELINE B: SCAN THE BOTTOM ROW (CONCEALED TILES & WINNING TILE)
-        // ==========================================================================
-        let currentX_Bot = 0;
-        let looseTilesStaging = [];
-        while (currentX_Bot + approximateTileWidth <= dimensions.w) {
-          let isFarRightTile = (currentX_Bot + (approximateTileWidth * 1.5) > dimensions.w);
-          let rect = new window.cv.Rect(currentX_Bot, 0, approximateTileWidth, dimensions.h);
-          let croppedTileMat = bottomMatGray.roi(rect);
-          let highestMatchScore = -1;
-          let bestMatchedTileObject = null;
-          
-          for (let tileId in this.tilePixelTemplates) {
-            let templateMat = this.tilePixelTemplates[tileId];
-            let resizedTemplate = new window.cv.Mat();
-            
-            let targetW = Math.floor(approximateTileWidth * templateScaleFactor);
-            let targetH = Math.floor(dimensions.h * templateScaleFactor);
-            let targetSize = new window.cv.Size(targetW, targetH);
-            window.cv.resize(templateMat, resizedTemplate, targetSize, 0, 0, window.cv.INTER_LINEAR);
-            
-            let matchResult = new window.cv.Mat();
-            window.cv.matchTemplate(croppedTileMat, resizedTemplate, matchResult, window.cv.TM_CCOEFF_NORMED);
-            let minMax = window.cv.minMaxLoc(matchResult);
-            
-            if (minMax.maxVal > highestMatchScore) {
-              highestMatchScore = minMax.maxVal;
-              bestMatchedTileObject = window.HandOrganizer.tileRegistry.find(t => t.id === tileId);
-            }
-            resizedTemplate.delete();
-            matchResult.delete();
-          }
-          
-          if (bestMatchedTileObject && highestMatchScore > 0.72) {
-            if (isFarRightTile) {
-              window.HandOrganizer.handLayout.winningTile = { ...bestMatchedTileObject };
-            } else {
-              looseTilesStaging.push({ ...bestMatchedTileObject });
-            }
-          }
-          croppedTileMat.delete();
-          currentX_Bot += approximateTileWidth;
+
+        if (predictedId) {
+          detectedTiles.push(predictedId);
         }
-        
-        window.HandOrganizer.handLayout.concealedTiles = looseTilesStaging;
-        
-        // Cleanup Grayscale Mats
-        topMatSrc.delete(); bottomMatSrc.delete();
-        topMatGray.delete(); bottomMatGray.delete();
-        
-        console.log("OpenCV baseline template matrix match loop complete.");
-        window.HandOrganizer.refreshDOM();
-        customAlert("AI Scanning Complete! Board synchronized cleanly.");
-      } catch (opencvError) {
-        console.error("OpenCV processing crashed: ", opencvError);
+        currentX += approxWidth;
       }
-    }, 150);
+
+      // Sync successfully classified items back into your dashboard hand layout tracks
+      detectedTiles.forEach((tileId, idx) => {
+        let matchedObject = window.HandOrganizer.tileRegistry.find(t => t.id === tileId);
+        if (!matchedObject) return;
+
+        if (isTopRow) {
+          window.HandOrganizer.handLayout.meldedSets.push({
+            type: "pung",
+            concealed: false,
+            tiles: [ { ...matchedObject } ]
+          });
+        } else {
+          let isFarRight = (idx === detectedTiles.length - 1);
+          if (isFarRight) {
+            window.HandOrganizer.handLayout.winningTile = { ...matchedObject };
+          } else {
+            window.HandOrganizer.handLayout.concealedTiles.push({ ...matchedObject });
+          }
+        }
+      });
+    };
+
+    // Run both lane arrays concurrently
+    await processRowAI(topRow, true);
+    await processRowAI(bottomRow, false);
+
+    window.HandOrganizer.refreshDOM();
+    customAlert("AI Scanning Complete: TensorFlow Neural Network Sync Complete!");
   }
 };
 window.CameraEngine = CameraEngine;

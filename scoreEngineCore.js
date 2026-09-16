@@ -36,6 +36,14 @@ const ScoreEngine = {
       let cards = m.type === "kong" ? m.tiles.slice(0, 3) : m.tiles;
       totalFlatTiles = totalFlatTiles.concat(cards);
     });
+     // 🌟 THE FIX: Explicitly injection process the Winning Tile into the global flat array bank
+    if (ctx.winningTile) {
+     totalFlatTiles.push({
+         id: ctx.winningTile.id,
+         pool: ctx.winningTile.pool,
+         val: parseInt(ctx.winningTile.val, 10) || 0
+     });
+    }
 
     // Delegate calculation queries out to dedicated rules modules
     if (ctx.variant === "HK") {

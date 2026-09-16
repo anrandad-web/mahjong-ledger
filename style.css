@@ -456,3 +456,60 @@ body {
   transform: translateY(-8px) scale(1.06) !important;
   margin-right: -4px !important;  /* Opens up space dynamically around active item */
 }
+/* ==========================================================================
+ 5. MODERN SEGMENTED PILL RADIO BUTTON LAYOUT ENHANCEMENTS
+ ========================================================================== */
+.inline-radio-group {
+    display: inline-flex !important;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 3px !important;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+}
+
+/* Transform standard radio labels into sleek pill buttons */
+.inline-radio-group .radio-label {
+    position: relative;
+    padding: 4px 10px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-dim) !important;
+    border-radius: 4px;
+    margin: 0 !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* Completely hide the default native browser circle radio buttons */
+.inline-radio-group .radio-label input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0 !important;
+}
+
+/* Hover effect on inactive pills */
+.inline-radio-group .radio-label:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Highlight states when an inner radio input is checked */
+.inline-radio-group .radio-label:has(input[type="radio"]:checked) {
+    color: #000 !important;
+    background-color: var(--accent-blue) !important;
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.4);
+}
+
+/* Extra hyper-visible alert pop for the high-priority winning tile picker button */
+.inline-radio-group .radio-label:has(input[value="winning_tile"]:checked) {
+    color: #000 !important;
+    background-color: var(--primary-green) !important;
+    box-shadow: 0 2px 6px rgba(46, 204, 113, 0.4);
+}
