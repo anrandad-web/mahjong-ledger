@@ -15,7 +15,7 @@ Object.assign(ScoreEngine, {
                                "WIND_1", "WIND_2", "WIND_3", "WIND_4", 
                                "DRAGON_1", "DRAGON_2", "DRAGON_3"].every(k => uniqueOrphans.has(k));
             if (hasThirteen) {
-                localBreakdown.push({ rule: "Thirteen Orphans", pts: 88 });
+                localBreakdown.push({ rule: "Thirteen Orphans (MCR-7)", pts: 88 });
                 return true;
             }
         }
@@ -32,12 +32,12 @@ Object.assign(ScoreEngine, {
 
         // [PATTERN 2] BIG FOUR WINDS (大四喜 - 88 Points)
         if (windPungIds.size === 4) {
-            localBreakdown.push({ rule: "Big Four Winds", pts: 88 });
+            localBreakdown.push({ rule: "Big Four Winds (MCR-1)", pts: 88 });
             return true;
         }
         // [PATTERN 3] BIG THREE DRAGONS (大三元 - 88 Points)
         if (dragonPungIds.size === 3) {
-            localBreakdown.push({ rule: "Big Three Dragons", pts: 88 });
+            localBreakdown.push({ rule: "Big Three Dragons (MCR-2)", pts: 88 });
             return true;
         }
 
@@ -47,46 +47,45 @@ Object.assign(ScoreEngine, {
             for (let i = 1; i <= 9; i++) valueCounts[i] = 0;
             flatTiles.forEach(t => { valueCounts[t.val] = (valueCounts[t.val] || 0) + 1; });
             if (valueCounts[1] >= 3 && valueCounts[9] >= 3 && [2,3,4,5,6,7,8].every(v => valueCounts[v] >= 1)) {
-                localBreakdown.push({ rule: "Nine Gates", pts: 88 });
+                localBreakdown.push({ rule: "Nine Gates (MCR-3)", pts: 88 });
                 return true;
             }
         }
 
-        // ⭐ FIXED ALL GREEN (绿一色 - MCR-10 - 88 Points)
-        // Triggers when every single tile in the hand is strictly a 2, 3, 4, 6, or 8 of Suo (Bamboos), 
-        // or a Green Dragon. No other tiles allowed!
+        // 🀄 RECALIBRATED ALL GREEN INTERCEPTOR
         let allowedGreenIds = ["T_SUO_2", "T_SUO_3", "T_SUO_4", "T_SUO_6", "T_SUO_8", "T_DRG_G"];
         let isAllGreen = flatTiles.every(t => allowedGreenIds.includes(t.id));
-            if (isAllGreen) {
-                localBreakdown.push({ rule: "All Green", pts: 88 });
-                return true; // Instantly intercepts the pipeline and blocks standard evaluation!
-            }
+        if (isAllGreen) {
+            localBreakdown.push({ rule: "All Green (MCR-10)", pts: 88 });
+            // Do NOT return true here! Let the pipeline continue so standard 
+            // combinations like All Pungs or Flushes can be added normally.
+        }
 
         // [PATTERN 5] LITTLE FOUR WINDS (小四喜 - 64 Points)
         if (windPungIds.size === 3 && pairPool === "WIND") {
-            localBreakdown.push({ rule: "Little Four Winds", pts: 64 });
+            localBreakdown.push({ rule: "Little Four Winds (MCR-13)", pts: 64 });
             return true;
         }
         // [PATTERN 6] LITTLE THREE DRAGONS (小三元 - 64 Points)
         if (dragonPungIds.size === 2 && pairPool === "DRAGON") {
-            localBreakdown.push({ rule: "Little Three Dragons", pts: 64 });
+            localBreakdown.push({ rule: "Little Three Dragons (MCR-14)", pts: 64 });
             return true;
         }
         // [PATTERN 7] ALL TERMINALS (清么九 - 64 Points)
         let allTerminals = flatTiles.every(t => (t.val === 1 || t.val === 9) && !["WIND", "DRAGON"].includes(t.pool));
         if (allTerminals && pungs.length === 4) {
-            localBreakdown.push({ rule: "All Terminals", pts: 64 });
+            localBreakdown.push({ rule: "All Terminals (MCR-9)", pts: 64 });
             return true;
         }
 
         // [PATTERN 8] FOUR PURE KONGS (四剛 - 64 Points)
         if (kongs.length === 4) {
-            localBreakdown.push({ rule: "Four Pure Kongs", pts: 64 });
+            localBreakdown.push({ rule: "Four Pure Kongs (MCR-11)", pts: 64 });
             return true;
         }
         // [PATTERN 9] THREE KONGS (三剛 - 32 Points)
         if (kongs.length === 3) {
-            localBreakdown.push({ rule: "Three Kongs", pts: 32 });
+            localBreakdown.push({ rule: "Three Kongs (MCR-31)", pts: 32 });
             return true;
         }
 

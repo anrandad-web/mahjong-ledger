@@ -11,15 +11,15 @@ Object.assign(ScoreEngine, {
 
     // --- SECTION A: MID-TIER FLUSH PATTERNS ---
     if (suitsInHand.size === 1 && honorTiles.length === 0) {
-      localBreakdown.push({ rule: "Full Flush", pts: 24 });
+      localBreakdown.push({ rule: "Full Flush (MCR-22)", pts: 24 });
     } else if (suitsInHand.size === 1 && honorTiles.length > 0) {
-      localBreakdown.push({ rule: "Half Flush", pts: 6 });
+      localBreakdown.push({ rule: "Half Flush (MCR-35)", pts: 6 });
     }
 
     // All Types (6 Points)
     let uniquePools = new Set(flatTiles.map(t => t.pool));
     if (uniquePools.has("WAN") && uniquePools.has("TONG") && uniquePools.has("SUO") && uniquePools.has("WIND") && uniquePools.has("DRAGON")) {
-      localBreakdown.push({ rule: "All Types", pts: 6 });
+      localBreakdown.push({ rule: "All Types (MCR-33)", pts: 6 });
     }
 
     // REVERSIBLE TILES (推不倒 - MCR-42 - 8 Points)
@@ -55,7 +55,7 @@ Object.assign(ScoreEngine, {
     }
     // --- SECTION B: PUNGS & KONG CONFIGURATIONS ---
     if (pungs.length === 4) {
-      localBreakdown.push({ rule: "All Pungs", pts: 6 });
+      localBreakdown.push({ rule: "All Pungs (MCR-44)", pts: 6 });
     }
 
     // ENHANCED KONG TRACKERS (MCR-76, MCR-77)
@@ -67,11 +67,30 @@ Object.assign(ScoreEngine, {
       }
     });
 
-    // PUNG OF TERMINALS SCANNER (么九刻 - MCR-70 - 1 Point)
+    // 🀄 CORRECTION: BULLETPROOF PUNG OF TERMINALS OR HONORS (MCR-73)
     pungs.forEach(p => {
       let rep = p.tiles && p.tiles[0] ? p.tiles[0] : null;
-      if (rep && (rep.val === 1 || rep.val === 9) && !["WIND", "DRAGON"].includes(rep.pool)) {
-        localBreakdown.push({ rule: `Terminal Pung (${rep.pool} ${rep.val})`, pts: 1 });
+      if (!rep) return;
+
+      // Rule fires on any Pung of 1s or 9s
+      let isTerminalPung = (rep.val === 1 || rep.val === 9) && ["WAN", "TONG", "SUO"].includes(rep.pool);
+      
+      // Rule ALSO fires on any Wind Pung that is NOT a Seat Wind or Prevalent Wind
+      let isWindPung = rep.pool === "WIND";
+      let isValuedWind = false;
+      if (isWindPung) {
+        let wVal = parseInt(rep.val, 10) || 0;
+        if ((wVal === 1 && (ctx.seatWind === 1 || ctx.roundWind === 1)) ||
+            (wVal === 2 && (ctx.seatWind === 2 || ctx.roundWind === 2)) ||
+            (wVal === 3 && (ctx.seatWind === 3 || ctx.roundWind === 3)) ||
+            (wVal === 4 && (ctx.seatWind === 4 || ctx.roundWind === 4))) {
+          isValuedWind = true;
+        }
+      }
+
+      if (isTerminalPung || (isWindPung && !isValuedWind)) {
+        let labelName = isWindPung ? "Wind" : `${rep.pool} ${rep.val}`;
+        localBreakdown.push({ rule: `Pung of Terminals or Honors (MCR-73) [${labelName}]`, pts: 1 });
       }
     });
 
@@ -96,7 +115,7 @@ Object.assign(ScoreEngine, {
             let t1 = m1.tiles[0]; let t2 = m2.tiles[0];
             if (t1.val === t2.val && t1.pool !== t2.pool && !["WIND", "DRAGON"].includes(t1.pool) && !["WIND", "DRAGON"].includes(t2.pool)) {
               if (!foundDoublePung) {
-                localBreakdown.push({ rule: "Double Pung", pts: 2 });
+                localBreakdown.push({ rule: "Double Pung (MCR-75)", pts: 2 });
                 foundDoublePung = true;
               }
             }
@@ -122,24 +141,44 @@ Object.assign(ScoreEngine, {
       }
     }
 
-    // CONCEALED PUNG EVALUATOR (MCR-15, MCR-32, MCR-69)
+    // 🀄 CORRECTION: BULLETPROOF CONCEALED PUNG EVALUATOR (MCR-15, MCR-32, MCR-69)
     let concealedPungCount = 0;
+
     pungs.forEach(p => {
-      let isMeldConcealed = p.concealed === true;
-      if (isMeldConcealed && ctx.winMethod === "discard") {
+      // Step A: A pung is natively concealed if its block state flag says so
+      let isPungConcealed = p.concealed === true;
+
+      // Step B: In MCR tournament rules, if you win off someone's discard, 
+      // the specific pung that matches your winning tile is treated as an open meld.
+      // But if your winning tile completed a CHOW or a PAIR, your existing concealed pungs stay 100% concealed!
+      if (isPungConcealed && ctx.winMethod === "discard" && ctx.winningTile) {
         let repTile = p.tiles && p.tiles[0] ? p.tiles[0] : null;
-        if (repTile && ctx.winningTile && repTile.pool === ctx.winningTile.pool && repTile.val === ctx.winningTile.val) {
-          isMeldConcealed = false; 
+        if (repTile && repTile.pool === ctx.winningTile.pool && (parseInt(repTile.val, 10) || 0) === (parseInt(ctx.winningTile.val, 10) || 0)) {
+          
+          // CRITICAL VALIDATOR CHECK: Did the winning tile actually go toward completing a Chow?
+          // If a chow contains our winning tile, then this pung is a separate entity and remains concealed!
+          let completedChowWithWin = chows.some(c => 
+            c.tiles && c.tiles.some(t => t.pool === ctx.winningTile.pool && (parseInt(t.val, 10) || 0) === (parseInt(ctx.winningTile.val, 10) || 0))
+          );
+
+          if (!completedChowWithWin) {
+            isPungConcealed = false; // The discard completed this pung, so it becomes open.
+          }
         }
       }
-      if (isMeldConcealed) { concealedPungCount++; }
+
+      if (isPungConcealed) { 
+        concealedPungCount++; 
+      }
     });
+
+    // Award the official MCR rule point allocations
     if (concealedPungCount === 4) {
       localBreakdown.push({ rule: "Four Concealed Pungs (MCR-15)", pts: 64 });
     } else if (concealedPungCount === 3) {
       localBreakdown.push({ rule: "Three Concealed Pungs (MCR-32)", pts: 6 });
     } else if (concealedPungCount === 2) {
-      localBreakdown.push({ rule: "Double Concealed Pung (MCR-69)", pts: 2 });
+      localBreakdown.push({ rule: "Double Concealed Pung (MCR-69)", pts: 2 }); // Officially 2 Pts!
     }
 
     // SHIFTED PUNGS & KONG CONFIGURATIONS (MCR-45, MCR-49, MCR-51, MCR-56)
@@ -187,7 +226,7 @@ Object.assign(ScoreEngine, {
     // --- SECTION C: CHOWS & SEQUENCES PATTERNS (THE GEOMETRIC FIX) ---
     // ==========================================================================
     if (chows.length === 4 && honorTiles.length === 0) {
-      localBreakdown.push({ rule: "All Chows", pts: 2 });
+      localBreakdown.push({ rule: "All Chows (MCR-65)", pts: 2 });
     }
     let chowMetadata = chows.map(c => {
       let values = c.tiles.map(t => parseInt(t.val, 10) || 0);
@@ -223,7 +262,7 @@ Object.assign(ScoreEngine, {
           let c1 = sortedChows[i]; let c2 = sortedChows[i+1]; let c3 = sortedChows[i+2];
           let distinctSuits = new Set([c1.pool, c2.pool, c3.pool]);
           if (distinctSuits.size === 3 && !distinctSuits.has("") && (c2.startVal - c1.startVal === 1) && (c3.startVal - c2.startVal === 1)) {
-            localBreakdown.push({ rule: "Mixed Shifted Chows", pts: 6 });
+            localBreakdown.push({ rule: "Mixed Shifted Chows (MCR-47)", pts: 6 });
           }
         }
       }
@@ -376,7 +415,7 @@ Object.assign(ScoreEngine, {
 
     let hasTerminalsOrHonors = flatTiles.some(t => t.val === 1 || t.val === 9 || ["WIND", "DRAGON"].includes(t.pool));
     if (!hasTerminalsOrHonors) {
-      localBreakdown.push({ rule: "No Terminals", pts: 1 });
+      localBreakdown.push({ rule: "All Simples (MCR-68)", pts: 2 });
     }
 
     pungs.forEach(p => {
@@ -385,7 +424,7 @@ Object.assign(ScoreEngine, {
         let dName = "White";
         if (t.val === 1 || t.id === "T_DRG_R") dName = "Red";
         if (t.val === 2 || t.id === "T_DRG_G") dName = "Green";
-        localBreakdown.push({ rule: `Dragon Pung (${dName})`, pts: 2 });
+        localBreakdown.push({ rule: `Dragon Pung (MCR-59) (${dName})`, pts: 2 });
       }
     });
 
@@ -394,20 +433,20 @@ Object.assign(ScoreEngine, {
         let t = p.tiles[0];
         let wVal = parseInt(t.val, 10) || 0;
         if (wVal === 1) {
-          if (ctx.seatWind === 1) localBreakdown.push({ rule: "Seat Wind (East)", pts: 2 });
-          if (ctx.roundWind === 1) localBreakdown.push({ rule: "Prevalent Wind (East)", pts: 2 });
+          if (ctx.seatWind === 1) localBreakdown.push({ rule: "Seat Wind (MCR-61) (East)", pts: 2 });
+          if (ctx.roundWind === 1) localBreakdown.push({ rule: "Prevalent Wind (MCR-60) (East)", pts: 2 });
         }
         if (wVal === 2) {
-          if (ctx.seatWind === 2) localBreakdown.push({ rule: "Seat Wind (South)", pts: 2 });
-          if (ctx.roundWind === 2) localBreakdown.push({ rule: "Prevalent Wind (South)", pts: 2 });
+          if (ctx.seatWind === 2) localBreakdown.push({ rule: "Seat Wind (MCR-61) (South)", pts: 2 });
+          if (ctx.roundWind === 2) localBreakdown.push({ rule: "Prevalent Wind (MCR-60) (South)", pts: 2 });
         }
         if (wVal === 3) {
-          if (ctx.seatWind === 3) localBreakdown.push({ rule: "Seat Wind (West)", pts: 2 });
-          if (ctx.roundWind === 3) localBreakdown.push({ rule: "Prevalent Wind (West)", pts: 2 });
+          if (ctx.seatWind === 3) localBreakdown.push({ rule: "Seat Wind (MCR-61) (West)", pts: 2 });
+          if (ctx.roundWind === 3) localBreakdown.push({ rule: "Prevalent Wind (MCR-60) (West)", pts: 2 });
         }
         if (wVal === 4) {
-          if (ctx.seatWind === 4) localBreakdown.push({ rule: "Seat Wind (North)", pts: 2 });
-          if (ctx.roundWind === 4) localBreakdown.push({ rule: "Prevalent Wind (North)", pts: 2 });
+          if (ctx.seatWind === 4) localBreakdown.push({ rule: "Seat Wind (MCR-61) (North)", pts: 2 });
+          if (ctx.roundWind === 4) localBreakdown.push({ rule: "Prevalent Wind (MCR-60) (North)", pts: 2 });
         }
       }
     });
@@ -432,23 +471,44 @@ Object.assign(ScoreEngine, {
       }
     }
 
+    // 🀄 RECALIBRATED WAITS DETECTION PIPELINE (MCR-77, MCR-78, MCR-79)
     if (ctx.winningTile && sol.pair) {
-      let isSingleWait = (ctx.winningTile.pool === sol.pair.pool && parseInt(ctx.winningTile.val) === parseInt(sol.pair.val));
-      if (isSingleWait) {
-        let totalMatchingConcealed = ctx.concealedLoose.filter(t => t.pool === ctx.winningTile.pool && parseInt(t.val) === parseInt(ctx.winningTile.val)).length;
-        if (totalMatchingConcealed === 1) { localBreakdown.push({ rule: "Single Wait (MCR-80)", pts: 1 }); }
+      let winVal = parseInt(ctx.winningTile.val, 10) || 0;
+      let pairVal = parseInt(sol.pair.val, 10) || 0;
+
+      // 1. SINGLE WAIT: Completing the eye pair
+      if (ctx.winningTile.pool === sol.pair.pool && winVal === pairVal) {
+        // Count total matching items inside the loose collection by pool and value directly
+        let totalLooseMatches = ctx.concealedLoose.filter(t => 
+          t.pool === ctx.winningTile.pool && (parseInt(t.val, 10) || 0) === winVal
+        ).length;
+
+        // In a true single wait layout, there will be exactly 2 copies in loose cards 
+        // (the 1 single tile you held + the 1 winning tile that completed the pair)
+        if (totalLooseMatches === 2) {
+          localBreakdown.push({ rule: "Single Wait (MCR-79)", pts: 1 });
+        }
       }
+
+      // 2. CLOSED & EDGE WAITS: Completing sequence chows
       let chowsList = sol.melds.filter(m => m.type === "chow");
+      let hitChowWait = false;
+
       for (let c of chowsList) {
         if (c.tiles && c.tiles.length === 3 && c.tiles[0] && c.tiles[0].pool === ctx.winningTile.pool) {
-          let vals = c.tiles.map(t => parseInt(t.val)).sort((a, b) => a - b);
-          let winVal = parseInt(ctx.winningTile.val);
+          let vals = c.tiles.map(t => parseInt(t.val, 10) || 0).sort((a, b) => a - b);
+          
+          // Closed Wait (Center tile of a run, e.g., waiting for 5 in a 4-5-6 run)
           if (winVal === vals[1]) {
-            localBreakdown.push({ rule: "Closed Wait (MCR-79)", pts: 1 });
+            localBreakdown.push({ rule: "Closed Wait (MCR-78)", pts: 1 });
+            hitChowWait = true;
             break;
           }
+          
+          // Edge Wait (Terminal 3 or 7 of a boundary run, e.g., 1-2 waiting for 3, or 8-9 waiting for 7)
           if ((vals[0] === 1 && winVal === 3) || (vals[2] === 9 && winVal === 7)) {
-            localBreakdown.push({ rule: "Edge Wait (MCR-81)", pts: 1 });
+            localBreakdown.push({ rule: "Edge Wait (MCR-77)", pts: 1 });
+            hitChowWait = true;
             break;
           }
         }

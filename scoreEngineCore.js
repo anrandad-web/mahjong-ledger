@@ -30,20 +30,14 @@ const ScoreEngine = {
     // Pass items smoothly to structural recursive deconstruction pipelines
     let validDecompositions = this.parseHandStructure(looseInventory, processedMelds);
 
-    // Build flattened array checks for global style testing trackers
+    // 🀄 THE CRITICAL ADJUSTMENT: Build a clean flat tile bank without duplicates
+    // Since looseInventory ALREADY includes the winning tile from gatherContextState(),
+    // we only need to combine it with the melded set blocks!
     let totalFlatTiles = [...looseInventory];
     processedMelds.forEach(m => {
       let cards = m.type === "kong" ? m.tiles.slice(0, 3) : m.tiles;
       totalFlatTiles = totalFlatTiles.concat(cards);
     });
-     // 🌟 THE FIX: Explicitly injection process the Winning Tile into the global flat array bank
-    if (ctx.winningTile) {
-     totalFlatTiles.push({
-         id: ctx.winningTile.id,
-         pool: ctx.winningTile.pool,
-         val: parseInt(ctx.winningTile.val, 10) || 0
-     });
-    }
 
     // Delegate calculation queries out to dedicated rules modules
     if (ctx.variant === "HK") {

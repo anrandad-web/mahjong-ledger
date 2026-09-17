@@ -9,7 +9,8 @@ Object.assign(ScoreEngine, {
     
     meldedSets.forEach(m => {
       let coreTiles = m.type === "kong" ? m.tiles.slice(0, 3) : m.tiles;
-      structuredMelds.push({ type: m.type, tiles: coreTiles });
+      // 🀄 FIX 1: Explicitly preserve the dashboard's concealed flag state here!
+      structuredMelds.push({ type: m.type, concealed: m.concealed, tiles: coreTiles });
     });
 
     let counts = {};
@@ -43,36 +44,48 @@ Object.assign(ScoreEngine, {
 
   backtrackMelds(tiles, currentMelds, callback) {
     if (tiles.length === 0) { callback([...currentMelds]); return; }
-    tiles.sort((a, b) => a.pool.localeCompare(b.pool) || a.val - b.val);
-    let first = tiles[0];
+    // Sort array safely by custom structural constraints
+    let sortedTiles = [...tiles].sort((a, b) => a.pool.localeCompare(b.pool) || a.val - b.val);
+    let first = sortedTiles[0];
 
     // Check Pungs
-    let pungMatches = tiles.filter(t => t.pool === first.pool && t.val === first.val);
+    let pungMatches = sortedTiles.filter(t => t.pool === first.pool && t.val === first.val);
     if (pungMatches.length >= 3) {
-      let nextTiles = [...tiles];
+      let nextTiles = [...sortedTiles];
       for (let i = 0; i < 3; i++) { 
-        nextTiles.splice(nextTiles.findIndex(t => t.pool === first.pool && t.val === first.val), 1); 
+        let remIdx = nextTiles.findIndex(t => t.pool === first.pool && t.val === first.val);
+        if (remIdx !== -1) nextTiles.splice(remIdx, 1); 
       }
-      currentMelds.push({ type: "pung", tiles: pungMatches.slice(0, 3) });
+      
+      // 🀄 FIX 2: Correctly attach the concealed flag for items discovered in loose cards
+      currentMelds.push({ type: "pung", concealed: true, tiles: pungMatches.slice(0, 3) });
       this.backtrackMelds(nextTiles, currentMelds, callback);
       currentMelds.pop();
     }
 
     // Check Chows
     if (!["WIND", "DRAGON"].includes(first.pool)) {
-      let idx1 = tiles.findIndex(t => t.pool === first.pool && t.val === first.val);
-      let idx2 = tiles.findIndex(t => t.pool === first.pool && t.val === first.val + 1);
-      let idx3 = tiles.findIndex(t => t.pool === first.pool && t.val === first.val + 2);
+      let idx1 = sortedTiles.findIndex(t => t.pool === first.pool && t.val === first.val);
+      let idx2 = sortedTiles.findIndex(t => t.pool === first.pool && t.val === first.val + 1);
+      let idx3 = sortedTiles.findIndex(t => t.pool === first.pool && t.val === first.val + 2);
       
       if (idx1 !== -1 && idx2 !== -1 && idx3 !== -1) {
-        let nextTiles = [...tiles];
-        let indicesToRemove = [idx1, idx2, idx3].sort((a, b) => b - a);
-        let t3 = nextTiles.splice(indicesToRemove[0], 1)[0];
-        let t2 = nextTiles.splice(indicesToRemove[1], 1)[0];
-        let t1 = nextTiles.splice(indicesToRemove[2], 1)[0];
+        let nextTiles = [...sortedTiles];
+        
+        // Grab references to the elements cleanly
+        let t1 = sortedTiles[idx1];
+        let t2 = sortedTiles[idx2];
+        let t3 = sortedTiles[idx3];
+
+        // Safely strip the items by matching unique identifier instances out from the layout
+        nextTiles.splice(nextTiles.findIndex(t => t.id === t1.id), 1);
+        nextTiles.splice(nextTiles.findIndex(t => t.id === t2.id), 1);
+        nextTiles.splice(nextTiles.findIndex(t => t.id === t3.id), 1);
         
         let chowTiles = [t1, t2, t3].sort((a, b) => a.val - b.val);
-        currentMelds.push({ type: "chow", tiles: chowTiles });
+        
+        // 🀄 FIX 3: Correctly attach the concealed flag for chows built out of loose cards
+        currentMelds.push({ type: "chow", concealed: true, tiles: chowTiles });
         this.backtrackMelds(nextTiles, currentMelds, callback);
         currentMelds.pop();
       }

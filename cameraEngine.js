@@ -21,7 +21,7 @@ const CameraEngine = {
     });
   },
 
-  // 1. OFFLINE BRAIN INITIALIZER (Trains the model inside your browser memory)
+  // 1. DIAGNOSTIC OFFLINE BRAIN INITIALIZER
   async initializeTemplateDatabase() {
     if (this.isAiPrimed) return true;
 
@@ -31,40 +31,49 @@ const CameraEngine = {
     }
 
     console.log("TF.js Loading: Initializing MobileNet feature neural network layer...");
-    customAlert("AI Initializing: Downloading lightweight model architecture...");
+    customAlert("AI Initializing: Preparing neural network...");
     
-    // Load the pre-trained feature extractor models
-    this.mobilenetModel = await mobilenet.load({ version: 1, alpha: 0.25 }); // 0.25 keeps it ultra-light for mobile
-    this.knnClassifier = knnClassifier.create();
+    try {
+      // Ensure we explicitly catch network load errors
+      this.mobilenetModel = await mobilenet.load({ version: 1, alpha: 0.25 });
+      this.knnClassifier = knnClassifier.create();
+    } catch (netError) {
+      console.error("TF.js Core Model Load Failure:", netError);
+      customAlert("AI Error: Failed to load core MobileNet layers from scripts.");
+      return false;
+    }
 
-    console.log("TF.js Training: Passing your ref_img folder through the neural network...");
-    customAlert("AI Training: Rasterizing your custom tile stencils...");
-
+    console.log("TF.js Training: Passing ref_img folder through the network...");
+    
+    let loadedCount = 0;
     for (let tile of window.HandOrganizer.tileRegistry) {
       try {
-        // Map paths directly to your newly scanned PNGs
         const targetPath = "./" + tile.img.replace("image/", "ref_img/").replace(".svg", ".png");
         const visualAsset = await this.loadImageAsset(targetPath);
         
-        // Pass image through TensorFlow tensors
         const tfActivation = tf.tidy(() => {
           const tfImg = tf.browser.fromPixels(visualAsset);
-          // Resize precisely to MobileNet's expected input dimensions
           const resizedImg = tf.image.resizeBilinear(tfImg, [224, 224]);
-          // Extract the high-level geometric feature descriptions
           return this.mobilenetModel.infer(resizedImg, 'conv_preds');
         });
 
-        // Add this specific mathematical embedding signature to our local memory bank
         this.knnClassifier.addExample(tfActivation, tile.id);
-        tfActivation.dispose(); // Instantly clean GPU/CPU memory leaks
+        tfActivation.dispose();
+        loadedCount++;
       } catch (err) {
-        console.error(`AI Training Error on item map [${tile.id}]:`, err);
+        // This log will pinpoint EXACTLY which image file GitHub is failing to load!
+        console.error(`AI Training Error on item map [${tile.id}] at path:`, err);
       }
     }
 
-    console.log("TF.js Sync Success: Neural memory bank successfully primed!");
+    if (loadedCount === 0) {
+      customAlert("AI Failed: 0 reference images were loaded. Check paths on GitHub.");
+      return false;
+    }
+
+    console.log(`TF.js Sync Success: ${loadedCount} items successfully primed!`);
     this.isAiPrimed = true;
+    customAlert(`AI Engine Ready! Trained on ${loadedCount} tiles.`);
     return true;
   },
 
