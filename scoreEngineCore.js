@@ -30,6 +30,13 @@ const ScoreEngine = {
     // Pass items smoothly to structural recursive deconstruction pipelines
     let validDecompositions = this.parseHandStructure(looseInventory, processedMelds);
 
+    // 🀄 FIX: INVALID HAND INTERCEPTOR
+    // If the parser returns zero legal ways to form a hand, stop everything immediately!
+    if (validDecompositions.length === 0) {
+      customAlert("INVALID HAND: These tiles cannot form any legal winning combination!");
+      return;
+    }
+
     // 🀄 THE CRITICAL ADJUSTMENT: Build a clean flat tile bank without duplicates
     // Since looseInventory ALREADY includes the winning tile from gatherContextState(),
     // we only need to combine it with the melded set blocks!
