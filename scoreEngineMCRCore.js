@@ -21,7 +21,7 @@ Object.assign(ScoreEngine, {
       
       if (hasThirteen) {
         breakdown.push({ rule: "Thirteen Orphans (MCR-7)", pts: 88 });
-        if (isSelfDraw) breakdown.push({ rule: "Self-Draw", pts: 1 });
+        if (isSelfDraw) breakdown.push({ rule: "Self-Draw (MCR-80)", pts: 1 });
         if (ctx.flowerCount > 0) breakdown.push({ rule: `Flower Tiles (x${ctx.flowerCount})`, pts: ctx.flowerCount });
         return; 
       }
@@ -155,10 +155,14 @@ Object.assign(ScoreEngine, {
 
       // 3. Special Strategic Win Modifiers (Linked straight to your sidebar UI checkboxes)
       if (ctx.lastTile) {
-        localBreakdown.push({ rule: "Win on Last Tile (MCR-27)", pts: 8 });
+        localBreakdown.push({ rule: "Last Tile Draw (MCR-44)", pts: 8 }); // Picked from wall
+      }
+      // 🀄 FIX B: EVALUATE LAST TILE CLAIM PAYOUT
+      if (ctx.lastKind) {
+        localBreakdown.push({ rule: "Last Tile Claim (MCR-45)", pts: 4 }); // Claimed off discard
       }
       if (ctx.replacement) {
-        localBreakdown.push({ rule: "Out with Replacement Tile (MCR-28)", pts: 8 });
+        localBreakdown.push({ rule: "Out with Replacement Tile (MCR-46)", pts: 8 });
       }
       if (ctx.robbing) {
         localBreakdown.push({ rule: "Robbing the Kong (MCR-30)", pts: 8 });
@@ -183,8 +187,12 @@ Object.assign(ScoreEngine, {
     let rules = combinations.map(c => c.rule);
     let filtered = combinations.map(c => ({ ...c }));
    
+    // A Full Flush uses exactly 1 suit, meaning it natively voids the other 2 suits. 
     if (rules.some(r => r.includes("Full Flush"))) {
-      filtered = filtered.filter(c => !c.rule.includes("One Voided Suit"));
+      filtered = filtered.filter(c => 
+        !c.rule.includes("One Voided Suit") && 
+        !c.rule.includes("No Honors")
+      );
     }
     if (rules.some(r => r.includes("All Terminals"))) {
       filtered = filtered.filter(c => !c.rule.includes("Terminal Pung"));
@@ -195,11 +203,28 @@ Object.assign(ScoreEngine, {
     if (rules.some(r => r.includes("All Pungs"))) {
       filtered = filtered.filter(c => !c.rule.includes("Closed Wait") && !c.rule.includes("Edge Wait"));
     }
-    if (rules.some(r => r.includes("Pure Straight"))) {
-      filtered = filtered.filter(c => !c.rule.includes("Short Straight") && !c.rule.includes("Two Terminal Chows") && !c.rule.includes("Three Shifted Chows"));
+    
+    // ==========================================================================
+    // 🀄 FIX: AIRTIGHT STRAIGHT EXCLUSIONS (PREVENTS SUB-STRAIGHT POINT LEAKS)
+    // ==========================================================================
+    let hasPremiumStraight = rules.some(r => 
+      r.includes("Pure Straight") || 
+      r.includes("Mixed Straight") || 
+      r.includes("Four Shifted Chows") || 
+      r.includes("Mixed Shifted Chows") || 
+      r.includes("Three Shifted Chows")
+    );
+
+    if (hasPremiumStraight) {
+      filtered = filtered.filter(c => 
+        !c.rule.includes("Short Straight") && 
+        !c.rule.includes("Two Suit Short Straight") && 
+        !c.rule.includes("Two Terminal Chows")
+      );
     }
-    if (rules.some(r => r.includes("Four Shifted Chows"))) {
-      filtered = filtered.filter(c => !c.rule.includes("Short Straight") && !c.rule.includes("Three Shifted Chows") && !c.rule.includes("All Chows"));
+
+    if (rules.some(r => r.includes("Pure Shifted Pungs"))) {
+      filtered = filtered.filter(c => !c.rule.includes("Double Pung") && !c.rule.includes("All Pungs"));
     }
     if (rules.some(r => r.includes("Pure Shifted Pungs"))) {
       filtered = filtered.filter(c => !c.rule.includes("Double Pung") && !c.rule.includes("All Pungs"));
@@ -237,6 +262,26 @@ Object.assign(ScoreEngine, {
     if (rules.some(r => r.includes("Mixed Triple Pung"))) {
       filtered = filtered.filter(c => !c.rule.includes("Double Pung"));
     }
+    // Add inside filterMCRDoubleCounting just for extra safety:
+    if (rules.some(r => r.includes("All Simples"))) {
+      filtered = filtered.filter(c => !c.rule.includes("No Honors"));
+    }
+    if (rules.some(r => r.includes("All Chows"))) {
+      filtered = filtered.filter(c => !c.rule.includes("No Honors"));
+    }
+    // 🀄 FIX: BULLETPROOF ALL TERMINALS & HONORS OVERRIDE PROTECTION
+    // Natively strips out lower-tier triplets and geometric extensions to prevent points inflation!
+    if (rules.some(r => r.includes("All Terminals & Honors"))) {
+      filtered = filtered.filter(c => 
+        !c.rule.includes("All Pungs") && 
+        !c.rule.includes("Outside Hand") && 
+        !c.rule.includes("Pung of Terminals or Honors")
+      );
+    }
+        if (rules.some(r => r.includes("Reversible Tiles"))) {
+      filtered = filtered.filter(c => !c.rule.includes("One Voided Suit"));
+    }
+
     return filtered;
   }
 });

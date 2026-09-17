@@ -176,7 +176,7 @@ Object.assign(ScoreEngine, {
     if (concealedPungCount === 4) {
       localBreakdown.push({ rule: "Four Concealed Pungs (MCR-15)", pts: 64 });
     } else if (concealedPungCount === 3) {
-      localBreakdown.push({ rule: "Three Concealed Pungs (MCR-32)", pts: 6 });
+      localBreakdown.push({ rule: "Three Concealed Pungs (MCR-32)", pts: 16 });
     } else if (concealedPungCount === 2) {
       localBreakdown.push({ rule: "Double Concealed Pung (MCR-69)", pts: 2 }); // Officially 2 Pts!
     }
@@ -222,6 +222,7 @@ Object.assign(ScoreEngine, {
     if (concealedKongsCount === 2) {
       localBreakdown.push({ rule: "Two Concealed Kongs (MCR-56)", pts: 6 });
     }
+
     // ==========================================================================
     // --- SECTION C: CHOWS & SEQUENCES PATTERNS (THE GEOMETRIC FIX) ---
     // ==========================================================================
@@ -234,35 +235,82 @@ Object.assign(ScoreEngine, {
       return { startVal: Math.min(...values), pool: poolName };
     });
 
+    // ==========================================================================
+    // 🀄 CORRECTION: COMPREHENSIVE COMBINATORIAL SCANNERS FOR SHIFTED CHOWS
+    // ==========================================================================
     let hitPureStraight = false;
     let hitMixedStraight = false;
+    let hitMixedShifted = false;
+
     if (chowMetadata.length >= 3) {
       let sortedChows = [...chowMetadata].sort((a, b) => a.startVal - b.startVal);
-      for (let i = 0; i < sortedChows.length - 2; i++) {
-        let c1 = sortedChows[i]; let c2 = sortedChows[i+1]; let c3 = sortedChows[i+2];
-        if (c1.pool === c2.pool && c2.pool === c3.pool && c1.pool !== "") {
-          if (c1.startVal === 1 && c2.startVal === 4 && c3.startVal === 7) {
-            localBreakdown.push({ rule: "Pure Straight (MCR-25)", pts: 16 });
-            hitPureStraight = true;
+      
+      // ==========================================================================
+      // 🀄 FIX: ALL-COMBINATIONS SCANNER FOR PURE & MIXED STRAIGHTS
+      // ==========================================================================
+      // 1. Pure Straight Check (All combinations loop)
+      for (let i = 0; i < chowMetadata.length; i++) {
+        for (let j = 0; j < chowMetadata.length; j++) {
+          for (let k = 0; k < chowMetadata.length; k++) {
+            if (i !== j && j !== k && i !== k) {
+              let c1 = chowMetadata[i]; let c2 = chowMetadata[j]; let c3 = chowMetadata[k];
+              if (c1.pool === c2.pool && c2.pool === c3.pool && c1.pool !== "") {
+                if (c1.startVal === 1 && c2.startVal === 4 && c3.startVal === 7) {
+                  if (!hitPureStraight) {
+                    localBreakdown.push({ rule: "Pure Straight (MCR-25)", pts: 16 });
+                    hitPureStraight = true;
+                  }
+                }
+              }
+            }
           }
         }
       }
-      for (let i = 0; i < sortedChows.length - 2; i++) {
-        let c1 = sortedChows[i]; let c2 = sortedChows[i+1]; let c3 = sortedChows[i+2];
-        let distinctSuits = new Set([c1.pool, c2.pool, c3.pool]);
-        if (distinctSuits.size === 3 && !distinctSuits.has("")) {
-          if (c1.startVal === 1 && c2.startVal === 4 && c3.startVal === 7) {
-            localBreakdown.push({ rule: "Mixed Straight (MCR-39)", pts: 8 });
-            hitMixedStraight = true;
+
+      // 2. Mixed Straight Check (All combinations loop)
+      for (let i = 0; i < chowMetadata.length; i++) {
+        for (let j = 0; j < chowMetadata.length; j++) {
+          for (let k = 0; k < chowMetadata.length; k++) {
+            if (i !== j && j !== k && i !== k) {
+              let c1 = chowMetadata[i]; let c2 = chowMetadata[j]; let c3 = chowMetadata[k];
+              let uniqueSuits = new Set([c1.pool, c2.pool, c3.pool]);
+              if (uniqueSuits.size === 3 && !uniqueSuits.has("")) {
+                if (c1.startVal === 1 && c2.startVal === 4 && c3.startVal === 7) {
+                  if (!hitMixedStraight) {
+                    localBreakdown.push({ rule: "Mixed Straight (MCR-39)", pts: 8 });
+                    hitMixedStraight = true;
+                  }
+                }
+              }
+            }
           }
         }
       }
+
+      // 3. 🀄 FIX: ALL-COMBINATIONS SCANNER FOR MIXED SHIFTED CHOWS (MCR-47)
+      // Loops through every combination of 3 unique chows to eliminate duplicates blocking the track step
       if (!hitPureStraight && !hitMixedStraight) {
-        for (let i = 0; i < sortedChows.length - 2; i++) {
-          let c1 = sortedChows[i]; let c2 = sortedChows[i+1]; let c3 = sortedChows[i+2];
-          let distinctSuits = new Set([c1.pool, c2.pool, c3.pool]);
-          if (distinctSuits.size === 3 && !distinctSuits.has("") && (c2.startVal - c1.startVal === 1) && (c3.startVal - c2.startVal === 1)) {
-            localBreakdown.push({ rule: "Mixed Shifted Chows (MCR-47)", pts: 6 });
+        for (let i = 0; i < chowMetadata.length; i++) {
+          for (let j = 0; j < chowMetadata.length; j++) {
+            for (let k = 0; k < chowMetadata.length; k++) {
+              if (i !== j && j !== k && i !== k) {
+                let c1 = chowMetadata[i];
+                let c2 = chowMetadata[j];
+                let c3 = chowMetadata[k];
+
+                // Check if they shift sequentially by exactly 1 step (e.g. 3 -> 4 -> 5)
+                let isShiftedSequence = (c2.startVal - c1.startVal === 1) && (c3.startVal - c2.startVal === 1);
+                // Ensure all three suits are distinct and valid
+                let uniqueSuits = new Set([c1.pool, c2.pool, c3.pool]);
+
+                if (isShiftedSequence && uniqueSuits.size === 3 && !uniqueSuits.has("")) {
+                  if (!hitMixedShifted) {
+                    localBreakdown.push({ rule: "Mixed Shifted Chows (MCR-47)", pts: 6 });
+                    hitMixedShifted = true;
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -305,15 +353,21 @@ Object.assign(ScoreEngine, {
       let k = `${t.pool}_${t.val}`;
       tileCountsTracker[k] = (tileCountsTracker[k] || 0) + 1;
     });
-    let tileHogCount = 0;
     let totalKongsCount = sol.melds.filter(m => m.type === "kong").length;
+    let registeredTileHogsCount = 0;
+
     Object.keys(tileCountsTracker).forEach(k => {
-      if (tileCountsTracker[k] === 4) { tileHogCount++; }
+      if (tileCountsTracker[k] === 4) { 
+        registeredTileHogsCount++; 
+      }
     });
-    let finalTileHogs = Math.max(0, tileHogCount - totalKongsCount);
+
+    // Each unique tile face where you hold all 4 copies (without declaring a Kong) scores 1 point independently!
+    let finalTileHogs = Math.max(0, registeredTileHogsCount - totalKongsCount);
     if (finalTileHogs > 0) {
-      localBreakdown.push({ rule: "Tile-Hog (MCR-72)", pts: finalTileHogs * 1 });
+      localBreakdown.push({ rule: "Tile-Hog (MCR-64)", pts: finalTileHogs * 2 });
     }
+    
     // PARALLEL TWIN CHOW ANALYZER (MCR-23, MCR-41, MCR-71, MCR-73)
     if (chowMetadata.length >= 2) {
       let valuePatterns = {};
@@ -413,9 +467,21 @@ Object.assign(ScoreEngine, {
       if (pairHasFive && allMeldsHaveFive) { localBreakdown.push({ rule: "All Fives (MCR-38)", pts: 16 }); }
     }
 
-    let hasTerminalsOrHonors = flatTiles.some(t => t.val === 1 || t.val === 9 || ["WIND", "DRAGON"].includes(t.pool));
-    if (!hasTerminalsOrHonors) {
+    // ==========================================================================
+    // 🀄 CORRECTION: DUAL-TRACKING FOR ALL SIMPLES vs NO HONORS
+    // ==========================================================================
+    let hasHonors = flatTiles.some(t => ["WIND", "DRAGON"].includes(t.pool));
+    let hasTerminals = flatTiles.some(t => (t.val === 1 || t.val === 9) && ["WAN", "TONG", "SUO"].includes(t.pool));
+
+    // 1. ALL SIMPLES (MCR-68) - 2 Points: Strict 0 Terminals AND 0 Honors
+    if (!hasHonors && !hasTerminals) {
       localBreakdown.push({ rule: "All Simples (MCR-68)", pts: 2 });
+    }
+    
+    // 2. NO HONORS (MCR-76) - 1 Point: Strict 0 Honors, but has 1s or 9s
+    // (Note: If All Simples triggers, it automatically implies no honors, so we check hasTerminals to prevent illegal stacking)
+    if (!hasHonors && hasTerminals) {
+      localBreakdown.push({ rule: "No Honors (MCR-76)", pts: 1 });
     }
 
     pungs.forEach(p => {
@@ -460,7 +526,7 @@ Object.assign(ScoreEngine, {
       if (isEveryTileTerminalOrHonor && isAllPungs) {
         let totalSuitsFound = new Set(flatTiles.map(t => t.pool).filter(p => ["WAN", "TONG", "SUO"].includes(p))).size;
         if (totalSuitsFound > 0 && honorTiles.length > 0) {
-          localBreakdown.push({ rule: "Mixed Terminals (MCR-29)", pts: 32 });
+          localBreakdown.push({ rule: "All Terminals & Honors (MCR-18)", pts: 32 });
         }
       }
       let pairIsOutside = (pairTile.val === 1 || pairTile.val === 9 || ["WIND", "DRAGON"].includes(pairTile.pool));
@@ -490,29 +556,60 @@ Object.assign(ScoreEngine, {
         }
       }
 
-      // 2. CLOSED & EDGE WAITS: Completing sequence chows
-      let chowsList = sol.melds.filter(m => m.type === "chow");
-      let hitChowWait = false;
+    // 🀄 RECALIBRATED WAITS DETECTION PIPELINE
+    if (ctx.winningTile && sol.pair) {
+      let winVal = parseInt(ctx.winningTile.val, 10) || 0;
+      let pairVal = parseInt(sol.pair.val, 10) || 0;
 
-      for (let c of chowsList) {
-        if (c.tiles && c.tiles.length === 3 && c.tiles[0] && c.tiles[0].pool === ctx.winningTile.pool) {
-          let vals = c.tiles.map(t => parseInt(t.val, 10) || 0).sort((a, b) => a - b);
-          
-          // Closed Wait (Center tile of a run, e.g., waiting for 5 in a 4-5-6 run)
-          if (winVal === vals[1]) {
-            localBreakdown.push({ rule: "Closed Wait (MCR-78)", pts: 1 });
-            hitChowWait = true;
-            break;
+      // 1. SINGLE WAIT: Completing the eye pair
+      if (ctx.winningTile.pool === sol.pair.pool && winVal === pairVal) {
+        let totalGlobalMatches = flatTiles.filter(t => 
+          t.pool === ctx.winningTile.pool && (parseInt(t.val, 10) || 0) === winVal
+        ).length;
+
+        if (totalGlobalMatches === 2) {
+          localBreakdown.push({ rule: "Single Wait (MCR-79)", pts: 1 });
+        }
+      }
+
+      // ==========================================================================
+      // 🀄 FIX: RAW STATE SCANNER FOR CLOSED & EDGE WAITS
+      // ==========================================================================
+      let chowsList = sol.melds.filter(m => m.type === "chow");
+      let winPool = ctx.winningTile.pool;
+
+      let looseVals = ctx.concealedLoose
+        .filter(t => t.pool === winPool && t.id !== ctx.winningTile.id)
+        .map(t => parseInt(t.val, 10) || 0);
+
+      let holdsLowerHole = looseVals.includes(winVal - 1);
+      let holdsUpperHole = looseVals.includes(winVal + 1);
+
+      if (holdsLowerHole && holdsUpperHole) {
+        localBreakdown.push({ rule: "Closed Wait (MCR-78)", pts: 1 });
+      } else {
+        // Fallback array validator
+        for (let c of chowsList) {
+          if (c.tiles && c.tiles.length === 3 && c.tiles.pool === winPool) {
+            let vals = c.tiles.map(t => parseInt(t.val, 10) || 0).sort((a, b) => a - b);
+            if (winVal === vals[1]) {
+              localBreakdown.push({ rule: "Closed Wait (MCR-78)", pts: 1 });
+              break;
+            }
           }
-          
-          // Edge Wait (Terminal 3 or 7 of a boundary run, e.g., 1-2 waiting for 3, or 8-9 waiting for 7)
+        }
+      }
+
+      // Edge Wait Check (Terminal 3 or 7 boundary runs)
+      for (let c of chowsList) {
+        if (c.tiles && c.tiles.length === 3 && c.tiles.pool === winPool) {
+          let vals = c.tiles.map(t => parseInt(t.val, 10) || 0).sort((a, b) => a - b);
           if ((vals[0] === 1 && winVal === 3) || (vals[2] === 9 && winVal === 7)) {
             localBreakdown.push({ rule: "Edge Wait (MCR-77)", pts: 1 });
-            hitChowWait = true;
             break;
           }
         }
       }
     }
   }
-});
+}});
