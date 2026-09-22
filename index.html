@@ -25,55 +25,6 @@
     }
     </style>
 
-    <!-- ==========================================================================
-         SCREEN MODULE D: AI CAMERA SCANNER VIEWPORT MODAL OVERLAY
-         ========================================================================== -->
-    <div id="camera-scanner-screen" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); z-index: 9999; padding: 15px; box-sizing: border-box; flex-direction: column; gap: 10px;">
-      
-      <!-- Top Status Return Bar -->
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-        <span style="font-size: 14px; color: gold; font-weight: bold;">📸 AI Camera Tile Recognition (Route B)</span>
-        <button onclick="CameraEngine.closeCameraScanner()" style="background: transparent; border: 1px solid #e74c3c; padding: 4px 12px; color: #e74c3c; border-radius: 4px; font-size: 12px; cursor: pointer; font-weight: bold;">🔙 Abort Scan</button>
-      </div>
-
-      <!-- FLAT ALIGNMENT INSTRUCTIONS CARD -->
-      <div style="background: rgba(255,255,255,0.03); border: 1px dashed var(--accent-blue); padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; color: var(--text-light);">
-        <div style="font-weight: bold; color: var(--accent-blue); margin-bottom: 4px; text-transform: uppercase;">⚠️ Rules for Table Alignment:</div>
-        <ul style="margin: 0; padding-left: 15px; display: flex; flex-direction: column; gap: 2px;">
-          <li>Place hand <b style="color: var(--primary-green);">flat on the table</b>. No overlapping or leaning tiles.</li>
-          <li><b>Top Row:</b> All open Melded Sets and Bonus Flowers.</li>
-          <li><b>Bottom Row:</b> All Concealed Tiles, with the <b style="color: gold;">Winning Tile at the far right</b>.</li>
-          <li>Hold tablet flat directly above and <b style="color: gold;">take the picture from the top look-down view</b>.</li>
-        </ul>
-      </div>
-
-      <!-- LIVE HARDWARE CAMERA STREAM VIEWPORT CONTAINER -->
-      <div style="flex: 1; position: relative; background: #000; border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center;">
-        <video id="camera-stream-feed" autoplay playsinline style="width: 100%; height: 100%; object-fit: cover;"></video>
-        
-        <!-- Geometric Grid Box Overlay Guides -->
-        <div id="camera-grid-guide" style="position: absolute; width: 90%; height: 60%; border: 2px dashed rgba(46, 204, 113, 0.5); border-radius: 4px; pointer-events: none; display: flex; flex-direction: column;">
-          <div style="flex: 1; border-bottom: 2px dashed rgba(46, 204, 113, 0.3); display: flex; align-items: center; justify-content: center; font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: bold; background: rgba(255,255,255,0.01);">
-            [ Align Top Row: Open Melds / Flowers ]
-          </div>
-          <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative; font-size: 10px; color: rgba(255,255,255,0.4); text-transform: uppercase; font-weight: bold; background: rgba(255,255,255,0.01);">
-            [ Align Bottom Row: Concealed Tiles ]
-            <!-- Targeted Winning Anchor Box Indicator -->
-            <div style="position: absolute; right: 0; bottom: 0; width: 60px; height: 100%; border-left: 2px solid gold; background: rgba(241, 196, 15, 0.1); display: flex; align-items: center; justify-content: center; font-size: 8px; color: gold; text-align: center; padding: 2px;">WIN TILE</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TRIGGER ACTION CONTROLS PANEL -->
-      <div style="display: flex; gap: 10px; justify-content: center; padding: 5px 0;">
-        <button onclick="CameraEngine.captureSnapshotFrame()" style="background: var(--primary-green); color: #000; font-size: 16px; font-weight: bold; border: none; padding: 12px 40px; border-radius: 30px; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 15px rgba(46,204,113,0.3);">📸 Capture & Template Match</button>
-      </div>
-
-      <!-- Hidden canvas context used to execute pixel crops offline -->
-      <canvas id="camera-processing-canvas" style="display: none;"></canvas>
-    </div>
-
-
     <!-- 1. COMPACT ONE-LINE TITLE -->
     <h1>🀄 Mahjong Tracker Dashboard</h1>
 
@@ -288,10 +239,10 @@
           </div>
         </div>
 
-                <!-- RIGHT SIDEBAR CONFIGURATOR COLUMNS PANEL -->
+        <!-- RIGHT SIDEBAR CONFIGURATOR COLUMNS PANEL -->
         <!-- CLEANED & VERTICALLY COMPACT SIDEBAR CONFIGURATOR PANEL -->
         <div class="control-panel">
-          
+
           <!-- AUTOMATED TRANSACTION HUB -->
           <div class="panel-group" style="background: rgba(255,255,255,0.03); padding: 8px; border-radius: 6px; border: 1px solid var(--border-color);">
             <div class="panel-title" style="color: gold;">👥 Round Transaction</div>
@@ -383,15 +334,43 @@
  </div>
  </div>
 
-          <!-- WORKSPACE ACTIONS TRIGGERS BUTTONS -->
-          <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
-            <button id="calc-btn" class="action-btn" onclick="ScoreEngine.calculateHandPoints()" style="background: var(--primary-green); color: #000; font-size: 15px; font-weight: bold; margin-top: 0 !important;">🚀 Calculate</button>
-            
-            <div style="display: flex; gap: 8px; width: 100%;">
-              <button id="clear-btn" class="action-btn" onclick="HandOrganizer.clearHand()" style="flex: 1; margin-top: 0 !important; font-size: 11px;">🗑 Clear Hand</button>
-              <button id="scan-camera-btn" class="action-btn" onclick="CameraEngine.openCameraScanner()" style="flex: 1; margin-top: 0 !important; background: var(--accent-blue); color: #fff; font-size: 11px;">📸 Scan</button>
-            </div>
-          </div>
+<!-- 🀄 QUICK MANUAL OVERRIDE INPUT BOX -->
+<div class="panel-group" style="background: rgba(241, 196, 15, 0.08); padding: 10px; border-radius: 6px; border: 1px solid gold; margin-bottom: 10px;">
+  <div class="panel-title" style="color: gold; margin-bottom: 6px;">⚡ Instant Score Entry</div>
+  
+  <!-- Relative anchor layout block -->
+  <div style="position: relative; width: 100%; display: block;">
+    <input type="number" id="manual-score-input" placeholder="Type score..." 
+           style="width: 100%; min-height: 34px; padding: 0 70px 0 10px; background: var(--bg-dark); border: 1px solid var(--border-color); color: #fff; border-radius: 4px; font-size: 14px; font-weight: bold; box-sizing: border-box;">
+    
+    <!-- Positioned text badge inside the box limits -->
+    <span id="manual-score-suffix" 
+          style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); font-weight: bold; color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; pointer-events: none; z-index: 20;">
+      Faan/Pts
+    </span>
+  </div>
+  
+</div>
+
+<!-- WORKSPACE ACTIONS TRIGGERS BUTTONS -->
+<div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+  <button id="calc-btn" class="action-btn"
+          onclick="ScoreEngine.calculateHandPoints()" style="background: var(--primary-green); color: #000; font-size: 15px; font-weight: bold; margin-top: 0 !important;">
+    🚀 Run Hand Score Calculations
+  </button>
+ 
+  <!-- 🀄 CLEAN SWAPPED ACTIONS ROW -->
+  <div style="display: flex; gap: 8px; width: 100%;">
+    <button id="clear-btn" class="action-btn"
+            onclick="HandOrganizer.clearHand()" style="flex: 1; margin-top: 0 !important; font-size: 12px;">
+      🗑 Clear Hand
+    </button>
+    <button id="commit-direct-btn" class="action-btn"
+            onclick="SessionEngine.commitManualOverrideScore()" style="flex: 1; margin-top: 0 !important; background: gold; color: #000; font-size: 12px; font-weight: bold;">
+      ✍️ Log Score
+    </button>
+  </div>
+</div>
 
         </div> <!-- Closes .control-panel cleanly -->
       </div> <!-- Closes .workspace-split cleanly -->
@@ -401,9 +380,6 @@
   <!-- ==========================================================================
        CRITICAL APPLICATION BACKBONE ENGINE LOADING ORDER PIPELINE
        ========================================================================== -->
-  <script src="tf.js"></script>
-  <script src="mobilenet.js"></script>
-  <script src="knn-classifier.js"></script>
   <script src="handOrganizer.js"></script>
   <script src="scoreEngineCore.js"></script>
   <script src="scoreEngineParser.js"></script>
@@ -434,20 +410,11 @@
         });
       });
     });
-
-    // Fully globalized callback ready to catch the immediate local file onload trigger
-    function onOpenCvReady() {
-      console.log("OpenCV.js WebAssembly layer compiled successfully!");
-      if (window.CameraEngine) {
-        window.CameraEngine.initializeTemplateDatabase();
-      }
-    }
   </script>
 
   <!-- 3. Ledger Session Infrastructure Scripts -->
   <script src="sessionCore.js"></script>
   <script src="sessionState.js"></script>
   <script src="sessionTransactions.js"></script>
-  <script src="cameraEngine.js"></script>
 </body>
 </html>
